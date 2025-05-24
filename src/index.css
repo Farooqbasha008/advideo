@@ -1,0 +1,179 @@
+/* Font imports for NEUE MACHINA and Aeonik */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+
+@layer base {
+  :root {
+    --background: 0 0% 75%;      /* Light Gray #C0C0C0 */
+    --foreground: 0 0% 0%;       /* Black #000000 */
+
+    --card: 0 0% 75%;            /* Light Gray #C0C0C0 */
+    --card-foreground: 0 0% 0%;  /* Black #000000 */
+
+    --popover: 0 0% 93%;         /* White #EEEEEE */
+    --popover-foreground: 0 0% 0%; /* Black #000000 */
+
+    --primary: 72 100% 50%;      /* Neon Green #C9FF00 */
+    --primary-foreground: 0 0% 0%; /* Black #000000 */
+
+    --secondary: 0 0% 75%;       /* Light Gray #C0C0C0 */
+    --secondary-foreground: 0 0% 0%; /* Black #000000 */
+
+    --muted: 0 0% 75%;           /* Light Gray #C0C0C0 */
+    --muted-foreground: 0 0% 20%; /* Darker variant of Black */
+
+    --accent: 72 100% 50%;       /* Neon Green #C9FF00 */
+    --accent-foreground: 0 0% 0%; /* Black #000000 */
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 93%; /* White #EEEEEE */
+
+    --border: 0 0% 75%;          /* Light Gray #C0C0C0 */
+    --input: 0 0% 75%;           /* Light Gray #C0C0C0 */
+    --ring: 72 100% 50%;         /* Neon Green #C9FF00 */
+
+    --radius: 0.5rem;
+
+    /* Editor-specific variables */
+    --editor-bg: 0 0% 0%;        /* Black #000000 */
+    --editor-panel: 0 0% 12%;    /* Dark Gray */
+    --editor-timeline: 0 0% 10%; /* Slightly lighter Black */
+    --editor-hover: 0 0% 15%;    /* Hover state Gray */
+    --editor-accent: 72 100% 50%; /* Neon Green #C9FF00 */
+    --editor-accent-hover: 72 90% 45%; /* Slightly darker Neon Green */
+  }
+
+  .dark {
+    --background: 0 0% 0%;       /* Black #000000 */
+    --foreground: 0 0% 93%;      /* White #EEEEEE */
+
+    --card: 0 0% 0%;             /* Black #000000 */
+    --card-foreground: 0 0% 93%; /* White #EEEEEE */
+
+    --popover: 0 0% 0%;          /* Black #000000 */
+    --popover-foreground: 0 0% 93%; /* White #EEEEEE */
+
+    --primary: 72 100% 50%;      /* Neon Green #C9FF00 */
+    --primary-foreground: 0 0% 0%; /* Black #000000 */
+
+    --secondary: 0 0% 25%;       /* Darker Gray */
+    --secondary-foreground: 0 0% 93%; /* White #EEEEEE */
+
+    --muted: 0 0% 25%;           /* Darker Gray */
+    --muted-foreground: 0 0% 65%; /* Lighter Gray */
+
+    --accent: 72 100% 50%;       /* Neon Green #C9FF00 */
+    --accent-foreground: 0 0% 0%; /* Black #000000 */
+
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 0 0% 93%; /* White #EEEEEE */
+
+    --border: 0 0% 35%;          /* Mid-tone Gray */
+    --input: 0 0% 35%;           /* Mid-tone Gray */
+    --ring: 72 100% 50%;         /* Neon Green #C9FF00 */
+  }
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  html, body, #root {
+    height: 100%;
+    width: 100%;
+    overflow: auto;
+  }
+
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-feature-settings: "rlig" 1, "calt" 1;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    font-weight: 600;
+  }
+}
+
+@layer components {
+  .glass-panel {
+    background-color: rgba(var(--theme-light), 0.1);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(var(--theme-light), 0.2);
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  }
+
+  .video-item {
+    border-radius: 0.375rem;
+    overflow: hidden;
+    background-color: var(--editor-panel);
+    border: 1px solid rgba(var(--theme-light), 0.1);
+    transition-property: all;
+    transition-duration: 300ms;
+    cursor: grab;
+    user-select: none;
+  }
+
+  .timeline-item {
+    border-radius: 0.375rem;
+    overflow: hidden;
+    background-color: rgba(var(--theme-primary), 0.7);
+    border: 1px solid rgba(var(--theme-light), 0.1);
+    transition: all 150ms;
+    cursor: grab;
+    user-select: none;
+  }
+
+  .playhead {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background-color: rgba(var(--theme-primary), 0.8);
+    z-index: 10;
+    transition-property: transform;
+    transition-duration: 100ms;
+  }
+
+  .timeline-track {
+    height: 4rem;
+    position: relative;
+    border-bottom: 1px solid rgba(var(--theme-light), 0.05);
+    transition: all 200ms;
+  }
+
+  .time-marker {
+    font-size: 0.75rem;
+    color: rgba(var(--theme-light), 0.5);
+    border-right: 1px solid rgba(var(--theme-light), 0.1);
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .hover-scale {
+    transition: transform 150ms;
+  }
+
+  .button-icon {
+    padding: 0.5rem;
+    border-radius: 9999px;
+    background-color: rgba(var(--editor-panel), 0.8);
+    backdrop-filter: blur(4px);
+    transition: all 0.2s;
+    border: 1px solid rgba(var(--theme-light), 0.1);
+    color: rgba(var(--theme-light), 0.8);
+  }
+
+  .dragging {
+    opacity: 0.5;
+    transform: scale(0.95);
+  }
+}
