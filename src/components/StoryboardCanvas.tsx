@@ -41,20 +41,35 @@ import {
   Edit2,
   Trash2,
   Maximize,
-  Loader2
+  Loader2,
+  Film,
+  Pencil
 } from 'lucide-react';
 import { Toast } from '@/components/ui/toast';
 import { StoryboardScene } from '@/lib/videoGeneration';
-import { ScriptScene } from '@/lib/types';
 import { cn } from '@/lib/utils';
+
+// Define ScriptScene interface locally to avoid import issues
+interface ScriptScene {
+  sceneNumber: number;
+  setting: string;
+  textToVideoPrompt: string;
+  voiceoverPrompt: string;
+  backgroundMusicPrompt: string;
+}
 
 interface StoryboardCanvasProps {
   scenes: ScriptScene[];
   storyboard: StoryboardScene[];
   onUpdateStoryboard: (storyboard: StoryboardScene[]) => void;
   onGeneratePreview?: (sceneIndex: number) => Promise<string | null>;
+  onGenerateVideo?: (sceneIndex: number) => void;
   isLoading?: boolean;
   previewUrls?: Record<number, string>;
+  videoUrls?: Record<number, string>;
+  instantCharacterPreviews?: Record<number, boolean>;
+  reordering?: boolean;
+  setReordering?: (reordering: boolean) => void;
 }
 
 const StoryboardCanvas: React.FC<StoryboardCanvasProps> = ({
@@ -62,14 +77,18 @@ const StoryboardCanvas: React.FC<StoryboardCanvasProps> = ({
   storyboard,
   onUpdateStoryboard,
   onGeneratePreview,
+  onGenerateVideo,
   isLoading = false,
-  previewUrls = {}
+  previewUrls = {},
+  videoUrls = {},
+  instantCharacterPreviews = {},
+  reordering = false,
+  setReordering
 }) => {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [tempScene, setTempScene] = useState<StoryboardScene | null>(null);
   const [isGeneratingPreview, setIsGeneratingPreview] = useState<number | null>(null);
   const [expandedScene, setExpandedScene] = useState<number | null>(null);
-  const [reordering, setReordering] = useState(false);
 
   // Handle edit of a storyboard scene
   const handleEdit = (index: number) => {
@@ -181,22 +200,18 @@ const StoryboardCanvas: React.FC<StoryboardCanvasProps> = ({
 
   return (
     <div className="w-full">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-2xl font-bold text-white">Visual Storyboard</h2>
-        <div className="flex items-center space-x-2">
+      {reordering && (
+        <div className="flex items-center justify-end mb-4">
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setReordering(!reordering)}
-            className={cn(
-              "text-white hover:bg-white/10",
-              reordering && "bg-white/10"
-            )}
+            onClick={() => setReordering && setReordering(false)}
+            className="text-white hover:bg-white/10 bg-white/10"
           >
-            {reordering ? "Done Reordering" : "Reorder Scenes"}
+            Done Reordering
           </Button>
         </div>
-      </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {storyboard.map((scene, index) => (
@@ -263,36 +278,53 @@ const StoryboardCanvas: React.FC<StoryboardCanvasProps> = ({
               </CardDescription>
             </CardHeader>
 
-            <CardContent>
-              {/* Preview Image */}
-              <div className="aspect-video rounded overflow-hidden bg-black/50 mb-4 relative">
-                {previewUrls[index] ? (
-                  <img 
-                    src={previewUrls[index]} 
-                    alt={`Scene ${index + 1} preview`} 
-                    className="w-full h-full object-cover" 
-                  />
+            <CardContent className="pb-2">
+              {/* Scene preview section */}
+              <div className="aspect-video bg-black/40 rounded-md overflow-hidden relative">
+                {previewUrls && previewUrls[index] ? (
+                  <>
+                    <img 
+                      src={previewUrls[index]} 
+                      alt={`Preview for scene ${index + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                    
+                    <div className="absolute top-2 left-2 right-2 flex items-center justify-between">
+                      {/* Character quality badge - show if this was generated with Instant Character */}
+                      {instantCharacterPreviews && instantCharacterPreviews[index] && (
+                        <div className="flex items-center bg-black/60 rounded-full px-2 py-0.5">
+                          <div className="w-2 h-2 rounded-full bg-[#D7F266] mr-1"></div>
+                          <span className="text-[10px] text-white">HD Quality</span>
+                        </div>
+                      )}
+                      
+                      {/* Character consistency indicator - only show if videoUrls is defined */}
+                      {videoUrls !== undefined && (
+                        <div className="flex items-center gap-1 bg-black/60 rounded-full px-2 py-0.5">
+                          <div className={cn(
+                            "w-2 h-2 rounded-full",
+                            videoUrls[index] ? "bg-green-500" : "bg-orange-500"
+                          )}></div>
+                          <span className="text-[10px] text-white">
+                            {videoUrls[index] ? "Video ready" : "Image only"}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </>
                 ) : (
                   <div className="flex items-center justify-center h-full">
-                    <Image className="h-8 w-8 text-white/30" />
+                    <div className="text-center">
+                      <Image className="h-12 w-12 mx-auto mb-2 text-white/20" />
+                      <p className="text-sm text-white/50">No preview generated</p>
+                    </div>
                   </div>
                 )}
                 
                 {isGeneratingPreview === index && (
-                  <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/70">
                     <Loader2 className="h-8 w-8 animate-spin text-white" />
                   </div>
-                )}
-                
-                {!isGeneratingPreview && !isLoading && onGeneratePreview && !previewUrls[index] && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleGeneratePreview(index)}
-                    className="absolute bottom-2 right-2 bg-black/50 hover:bg-black/70 border-white/20 text-white"
-                  >
-                    Generate Preview
-                  </Button>
                 )}
               </div>
 
@@ -477,26 +509,51 @@ const StoryboardCanvas: React.FC<StoryboardCanvasProps> = ({
               )}
             </CardContent>
 
-            <CardFooter className="pt-0">
-              <div className="w-full flex justify-between items-center text-xs text-white/50">
-                <span>Shot {index + 1} of {storyboard.length}</span>
-                {!editingIndex && !reordering && onGeneratePreview && (
+            <CardFooter className="flex justify-between pt-2">
+              <div className="flex space-x-2">
+                {onGeneratePreview && (
                   <Button
-                    variant="ghost"
+                    variant="outline"
                     size="sm"
-                    onClick={() => handleGeneratePreview(index)}
-                    disabled={isGeneratingPreview !== null}
-                    className="text-xs h-7 hover:bg-white/10 text-white/70 hover:text-white"
+                    className="text-xs"
+                    onClick={() => onGeneratePreview(index)}
+                    disabled={isGeneratingPreview === index || isLoading}
                   >
                     {isGeneratingPreview === index ? (
                       <Loader2 className="h-3 w-3 mr-1 animate-spin" />
                     ) : (
-                      <RefreshCw className="h-3 w-3 mr-1" />
+                      <Image className="h-3 w-3 mr-1" />
                     )}
-                    Refresh Preview
+                    Generate Image
+                  </Button>
+                )}
+                
+                {/* Add video generation button */}
+                {previewUrls && previewUrls[index] && onGenerateVideo && (
+                  <Button
+                    variant="outline" 
+                    size="sm"
+                    className="text-xs"
+                    onClick={() => onGenerateVideo(index)}
+                    disabled={isLoading}
+                  >
+                    <Film className="h-3 w-3 mr-1" />
+                    Generate Video
                   </Button>
                 )}
               </div>
+              
+              {editingIndex !== index && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs"
+                  onClick={() => handleEdit(index)}
+                >
+                  <Pencil className="h-3 w-3 mr-1" />
+                  Edit Scene
+                </Button>
+              )}
             </CardFooter>
           </Card>
         ))}

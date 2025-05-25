@@ -416,3 +416,185 @@ export const generateVideo = async (
     num_inference_steps: 4
   });
 };
+
+/**
+ * Generate an image using fal.ai MiniMax Subject Reference model for consistent character appearance
+ * @param prompt Text prompt for image generation
+ * @param referenceImageUrl URL of the character reference image
+ * @param apiKey fal.ai API key
+ * @param options Additional generation options
+ * @returns URL to the generated image
+ */
+export const generateCharacterConsistentImage = async (
+  prompt: string,
+  referenceImageUrl: string,
+  apiKey: string,
+  options: {
+    aspectRatio?: string;
+    numImages?: number;
+  } = {}
+): Promise<string> => {
+  if (!apiKey) {
+    throw new Error('FAL.AI API key is required');
+  }
+  
+  try {
+    console.log('Generating image with character consistency via MiniMax');
+    
+    // Configure the client with the API key
+    fal.config({
+      credentials: apiKey
+    });
+    
+    // Use the MiniMax model with subject reference
+    const result = await fal.subscribe('fal-ai/minimax/image-01/subject-reference', {
+      input: {
+        prompt,
+        image_url: referenceImageUrl,
+        aspect_ratio: options.aspectRatio || "16:9",
+        num_images: options.numImages || 1
+      },
+      logs: true,
+      onQueueUpdate: (update) => {
+        if (update.status === "IN_PROGRESS") {
+          update.logs.map((log) => log.message).forEach(console.log);
+        }
+      },
+    });
+    
+    // Extract the image URL from the response
+    if (!result.data?.images || result.data.images.length === 0) {
+      throw new Error('No images were generated');
+    }
+    
+    return result.data.images[0].url;
+  } catch (error) {
+    console.error('Error generating character-consistent image:', error);
+    throw error;
+  }
+};
+
+/**
+ * Generate video from an image using MiniMax Video-01-Director model
+ * This model allows for camera movement instructions for dynamic shots
+ * @param prompt Text prompt for video generation, can include camera instructions in [brackets]
+ * @param imageUrl URL of the image to use as the first frame
+ * @param apiKey fal.ai API key
+ * @returns URL to the generated video
+ */
+export const generateVideoFromImage = async (
+  prompt: string,
+  imageUrl: string,
+  apiKey: string
+): Promise<string> => {
+  if (!apiKey) {
+    throw new Error('FAL.AI API key is required');
+  }
+  
+  try {
+    console.log('Generating video from image via MiniMax Director');
+    
+    // Configure the client with the API key
+    fal.config({
+      credentials: apiKey
+    });
+    
+    // Use the MiniMax Video-01-Director model
+    const result = await fal.subscribe('fal-ai/minimax/video-01-director/image-to-video', {
+      input: {
+        prompt,
+        image_url: imageUrl,
+        prompt_optimizer: true
+      },
+      logs: true,
+      onQueueUpdate: (update) => {
+        if (update.status === "IN_PROGRESS") {
+          update.logs.map((log) => log.message).forEach(console.log);
+        }
+      },
+    });
+    
+    // Extract the video URL from the response
+    if (!result.data?.video?.url) {
+      throw new Error('No video was generated');
+    }
+    
+    return result.data.video.url;
+  } catch (error) {
+    console.error('Error generating video from image:', error);
+    throw error;
+  }
+};
+
+/**
+ * Generate an image using fal.ai Instant Character model for high-quality character images
+ * @param prompt Text prompt for image generation
+ * @param referenceImageUrl URL of the character reference image
+ * @param apiKey fal.ai API key
+ * @param options Additional generation options
+ * @returns URL to the generated image
+ */
+export const generateInstantCharacterImage = async (
+  prompt: string,
+  referenceImageUrl: string,
+  apiKey: string,
+  options: {
+    imageSize?: string | { width: number; height: number };
+    scale?: number;
+    negativePrompt?: string;
+    numInferenceSteps?: number;
+  } = {}
+): Promise<string> => {
+  if (!apiKey) {
+    throw new Error('FAL.AI API key is required');
+  }
+  
+  try {
+    console.log('Generating high-quality character image via Instant Character model');
+    
+    // Configure the client with the API key
+    fal.config({
+      credentials: apiKey
+    });
+    
+    // Set default options
+    const scale = options.scale || 1;
+    const imageSize = options.imageSize || "landscape_16_9";
+    const negativePrompt = options.negativePrompt || "deformed, bad anatomy, disfigured, mutated, ugly, blurry";
+    const numInferenceSteps = options.numInferenceSteps || 30;
+    
+    // Use the Instant Character model
+    const result = await fal.subscribe('fal-ai/instant-character', {
+      input: {
+        prompt,
+        image_url: referenceImageUrl,
+        scale,
+        image_size: imageSize,
+        negative_prompt: negativePrompt,
+        num_inference_steps: numInferenceSteps,
+        num_images: 1,
+        enable_safety_checker: true
+      },
+      logs: true,
+      onQueueUpdate: (update) => {
+        if (update.status === "IN_PROGRESS") {
+          console.log("Processing image...");
+          update.logs?.map((log) => log.message).forEach(console.log);
+        }
+      },
+    });
+    
+    // Log the response for debugging
+    console.log('Instant Character API response:', JSON.stringify(result, null, 2));
+    
+    // Extract the image URL from the response
+    if (!result.data?.images || result.data.images.length === 0) {
+      throw new Error('No images were generated');
+    }
+    
+    return result.data.images[0].url;
+  } catch (error) {
+    console.error('Error generating character image with Instant Character:', error);
+    throw error;
+  }
+};

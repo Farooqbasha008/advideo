@@ -1,9 +1,16 @@
+/**
+ * Types for script and scene representation
+ */
+
+/**
+ * ScriptScene represents a single scene in a video script
+ */
 export interface ScriptScene {
   sceneNumber: number;
   setting: string;
   textToVideoPrompt: string;
-  voiceoverPrompt?: string;
-  backgroundMusicPrompt?: string;
+  voiceoverPrompt: string;
+  backgroundMusicPrompt: string;
 }
 
 export interface Character {
