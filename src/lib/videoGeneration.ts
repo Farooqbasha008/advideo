@@ -121,35 +121,57 @@ export const maintainContinuity = (
 export const determineShotType = (
   sceneIndex: number,
   totalScenes: number
-): 'wide' | 'medium' | 'close-up' => {
-  // Start with establishing shot
-  if (sceneIndex === 0) return 'wide';
+): StoryboardScene['shotType'] => {
+  // For the first scene, establish with a wide shot
+  if (sceneIndex === 0) {
+    return 'wide';
+  }
   
-  // End with wider context
-  if (sceneIndex === totalScenes - 1) return 'medium';
+  // For the last scene, end with either wide for conclusive feel or close-up for impact
+  if (sceneIndex === totalScenes - 1) {
+    // For commercial videos, ending with close-up is often more effective for CTA
+    return 'close-up';
+  }
   
-  // Alternate between medium and wide shots for variety
-  // Avoid close-ups due to AI limitations with faces
-  return sceneIndex % 2 === 0 ? 'medium' : 'wide';
+  // For dramatic moments or key product reveals, use close-up
+  if (sceneIndex % 3 === 0) { // Every third scene for variety
+    return 'close-up';
+  }
+  
+  // For transitions and secondary information, use medium shots
+  if (sceneIndex % 2 === 0) {
+    return 'medium';
+  }
+  
+  // Default to wide shot for other scenes
+  return 'wide';
 };
 
 export const planCameraMovement = (
-  shotType: string,
-  previousMovement?: string
-): 'static' | 'pan' | 'tilt' | 'tracking' => {
-  // Avoid consecutive similar movements
-  if (previousMovement === 'pan') return 'static';
-  if (previousMovement === 'tracking') return 'static';
-  
-  // Choose appropriate movement for shot type
-  switch (shotType) {
-    case 'wide':
-      return 'pan';
-    case 'medium':
-      return 'tracking';
-    default:
-      return 'static';
+  shotType: StoryboardScene['shotType'],
+  previousMovement?: StoryboardScene['cameraMovement']
+): StoryboardScene['cameraMovement'] => {
+  // Avoid jarring transitions from one movement type to another
+  if (previousMovement === 'tracking' || previousMovement === 'pan') {
+    return 'static'; // Rest after a dynamic shot
   }
+  
+  // Close-ups work well with static or slight movements
+  if (shotType === 'close-up') {
+    return Math.random() > 0.7 ? 'static' : 'tilt';
+  }
+  
+  // Wide shots work well with panning to showcase environment
+  if (shotType === 'wide') {
+    return Math.random() > 0.5 ? 'pan' : 'static';
+  }
+  
+  // Medium shots can handle tracking shots for following action
+  if (shotType === 'medium') {
+    return Math.random() > 0.6 ? 'tracking' : 'static';
+  }
+  
+  return 'static';
 };
 
 export const createEnvironmentProfile = (
@@ -169,3 +191,61 @@ export interface EnhancedVideoOptions {
   num_inference_steps?: number;
   seed?: number;
 }
+
+export const generateScenePrompt = (
+  sceneDescription: string,
+  storyboardParams: StoryboardScene
+): string => {
+  return `${sceneDescription}
+  Shot type: ${storyboardParams.shotType}. 
+  Camera movement: ${storyboardParams.cameraMovement}. 
+  ${storyboardParams.environmentType} scene during ${storyboardParams.timeOfDay}
+  with ${storyboardParams.lightingConditions}.
+  Visual style: ${storyboardParams.visualContinuity.colorPalette}.
+  ${storyboardParams.visualContinuity.atmosphericConditions}.
+  `
+};
+
+export const enhancePromptWithVisualGuidelines = (
+  basePrompt: string,
+  storyboard: StoryboardScene
+): string => {
+  return `${basePrompt.trim()}. ${storyboard.shotType} shot with ${storyboard.cameraMovement} camera movement. ${storyboard.environmentType} setting during ${storyboard.timeOfDay} with ${storyboard.lightingConditions}. Visual style: ${storyboard.visualContinuity.colorPalette}`;
+};
+
+export const getShotRecommendations = (
+  purpose: 'product' | 'service' | 'brand' | 'testimonial'
+): Array<{ type: string; description: string }> => {
+  switch (purpose) {
+    case 'product':
+      return [
+        { type: 'close-up', description: 'Show product details and features' },
+        { type: 'medium', description: 'Show product in use by customer' },
+        { type: 'wide', description: 'Show product in context or environment' }
+      ];
+    case 'service':
+      return [
+        { type: 'medium', description: 'Focus on service provider and customer interaction' },
+        { type: 'wide', description: 'Show service environment and atmosphere' },
+        { type: 'close-up', description: 'Show customer reactions and satisfaction' }
+      ];
+    case 'brand':
+      return [
+        { type: 'wide', description: 'Establish brand presence and scale' },
+        { type: 'medium', description: 'Show brand values through actions' },
+        { type: 'close-up', description: 'Highlight brand details and craftsmanship' }
+      ];
+    case 'testimonial':
+      return [
+        { type: 'medium', description: 'Frame speaker with comfortable headroom' },
+        { type: 'close-up', description: 'Show emotional expressions and reactions' },
+        { type: 'wide', description: 'Show speaker in relevant environment' }
+      ];
+    default:
+      return [
+        { type: 'balanced', description: 'Mix of shot types for visual variety' },
+        { type: 'dynamic', description: 'Incorporate camera movement for energy' },
+        { type: 'consistent', description: 'Maintain visual style across all scenes' }
+      ];
+  }
+};

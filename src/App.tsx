@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import LandingPage from "./pages/LandingPage";
 import NotFound from "./pages/NotFound";
 import ScriptGeneration from "./pages/ScriptGeneration";
+import StoryboardPage from "./pages/StoryboardPage";
 import Projects from "./pages/Projects";
 
 const queryClient = new QueryClient();
@@ -24,6 +25,7 @@ const App = () => (
             <Route path="/editor" element={<Index />} />
             <Route path="/editor/:projectId" element={<Index />} />
             <Route path="/script-generation" element={<ScriptGeneration />} />
+            <Route path="/storyboard" element={<StoryboardPage />} />
             <Route path="/projects" element={<Projects />} />
             <Route path="*" element={<NotFound />} />
           </Routes>

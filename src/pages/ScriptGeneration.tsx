@@ -1,7 +1,7 @@
 /** @jsxImportSource react */
 import * as React from 'react';
 import { useState, useRef, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -157,6 +157,9 @@ const ScriptGeneration: React.FC = () => {
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [showChatList, setShowChatList] = useState(false);
   
+  const navigate = useNavigate();
+  const location = useLocation();
+  
   // Create system message
   const createSystemMessage = (): Message => ({
     role: 'system',
@@ -231,6 +234,16 @@ const ScriptGeneration: React.FC = () => {
       setSupabaseKey(savedSupabaseKey);
     }
   }, []);
+  
+  // Check for returning from storyboard with data
+  useEffect(() => {
+    if (location.state?.returnWithStoryboard && location.state?.script) {
+      setGeneratedScript(location.state.script);
+      if (location.state.storyboard) {
+        setStoryboard(location.state.storyboard);
+      }
+    }
+  }, [location]);
   
   const handleApiKeySubmit = () => {
     if (apiKey.trim()) {
@@ -968,6 +981,21 @@ Each scene's textToVideoPrompt must follow the structured format and guidelines 
     </Dialog>
   );
 
+  // Function to navigate to storyboard page
+  const handleContinueToStoryboard = () => {
+    if (!generatedScript) {
+      toast.error('Please generate a script first');
+      return;
+    }
+    
+    navigate('/storyboard', {
+      state: {
+        script: generatedScript,
+        storyboard: storyboard.length > 0 ? storyboard : undefined
+      }
+    });
+  };
+
   return (
     <div className="h-screen flex flex-col bg-[#0E0E0E]">
       {/* Header */}
@@ -1363,6 +1391,15 @@ Each scene's textToVideoPrompt must follow the structured format and guidelines 
                             </div>
                           </div>
                         ))}
+                      </div>
+                      
+                      <div className="pt-4">
+                        <Button
+                          onClick={handleContinueToStoryboard}
+                          className="w-full bg-[#D7F266] hover:bg-[#D7F266]/90 text-[#151514]"
+                        >
+                          Continue to Storyboard
+                        </Button>
                       </div>
                     </div>
                   </div>
