@@ -1,4 +1,6 @@
 import { fal } from "@fal-ai/client";
+import { StoryboardScene } from './videoGeneration';
+import { enhancePromptWithVisualGuidelines } from './videoGeneration';
 
 interface ScriptGenerationOptions {
   duration?: number;
@@ -35,7 +37,50 @@ interface FalApiResponse {
   };
 }
 
-export async function generateVideo(
+interface FluxImageOptions {
+  width?: number;
+  height?: number;
+  num_inference_steps?: number;
+  seed?: number;
+  num_images?: number;
+  negativePrompt?: string;
+}
+
+interface FluxImageResponse {
+  images: Array<{
+    url: string;
+    width: number;
+    height: number;
+    content_type: string;
+  }>;
+  prompt: string;
+  seed: number;
+  timings: any;
+  has_nsfw_concepts: boolean[];
+}
+
+// Define proper types for the fal.ai Flux Schnell client response
+interface FluxSchnellOutput {
+  images: Array<{
+    url: string;
+    width: number;
+    height: number;
+    content_type: string;
+  }>;
+  prompt: string;
+  seed: number;
+  timings: any;
+  has_nsfw_concepts: boolean[];
+}
+
+/**
+ * Generate a video using the Wan text-to-video model from fal.ai
+ * @param prompt Text prompt for video generation
+ * @param apiKey fal.ai API key
+ * @param options Additional generation options
+ * @returns URL to the generated video
+ */
+export async function generateWanVideo(
   prompt: string,
   apiKey: string,
   options: ScriptGenerationOptions = {}
@@ -229,7 +274,6 @@ export async function generatePikaVideo(
         if (error.message.includes('rate limit')) {
           throw new Error('Rate limit exceeded. Please try again later.');
         }
-        // Add any Pika-specific error handling here
       }
       throw error;
     }
@@ -238,3 +282,137 @@ export async function generatePikaVideo(
     throw error;
   }
 }
+
+/**
+ * Generate an image using fal.ai Flux Schnell model
+ * @param prompt Text prompt for image generation
+ * @param apiKey fal.ai API key
+ * @param options Additional generation options
+ * @returns URL to the generated image
+ */
+export const generateImage = async (
+  prompt: string,
+  apiKey: string,
+  options: FluxImageOptions = {}
+): Promise<string> => {
+  if (!apiKey) {
+    throw new Error('FAL.AI API key is required');
+  }
+  
+  // Set default image size if not provided
+  const width = options.width || 1024;
+  const height = options.height || 768;
+  
+  // Set default number of inference steps
+  const num_inference_steps = options.num_inference_steps || 4;
+  
+  try {
+    console.log('Generating image with prompt:', prompt);
+    
+    // Configure the client with the API key
+    fal.config({
+      credentials: apiKey
+    });
+    
+    // Use the fal client to make the request
+    const result = await fal.subscribe('fal-ai/flux/schnell', {
+      input: {
+        prompt: prompt,
+        image_size: {
+          width,
+          height
+        },
+        num_inference_steps,
+        num_images: options.num_images || 1,
+        seed: options.seed,
+        enable_safety_checker: true
+      },
+      logs: true,
+      onQueueUpdate: (update) => {
+        if (update.status === "IN_PROGRESS") {
+          console.log('Processing: ', update.logs);
+        }
+      },
+    });
+    
+    // Log the full response for debugging
+    console.log('Flux Schnell API response:', JSON.stringify(result, null, 2));
+    
+    // Extract the image URL using proper typing
+    // The client returns result.data which contains the actual response
+    const responseData = result.data as FluxSchnellOutput;
+    if (!responseData?.images || responseData.images.length === 0) {
+      throw new Error('No images were generated');
+    }
+    
+    return responseData.images[0].url;
+  } catch (error) {
+    console.error('Error generating image:', error);
+    throw error;
+  }
+};
+
+/**
+ * Generate an image for a storyboard scene using Flux Schnell model
+ * @param scene The storyboard scene details
+ * @param scriptPrompt The original script prompt for this scene
+ * @param apiKey fal.ai API key
+ * @returns URL to the generated image
+ */
+export const generateStoryboardPreview = async (
+  scene: StoryboardScene,
+  scriptPrompt: string,
+  apiKey: string
+): Promise<string> => {
+  // Enhance the script prompt with visual guidelines from the storyboard
+  const enhancedPrompt = enhancePromptWithVisualGuidelines(scriptPrompt, scene);
+  
+  // Add some quality improvements for photorealistic results
+  const finalPrompt = `${enhancedPrompt}. Photorealistic, high quality, detailed, 8K resolution, cinematic lighting`;
+  
+  // Set negative prompts to avoid common issues
+  const negativePrompt = "deformed, bad anatomy, disfigured, poorly drawn face, mutation, mutated, extra limb, ugly, text, watermark";
+  
+  // Generate the image with appropriate aspect ratio based on shot type
+  let width = 1024;
+  let height = 768;
+  
+  if (scene.shotType === 'wide') {
+    // 16:9 aspect ratio for wide shots
+    width = 1024;
+    height = 576;
+  } else if (scene.shotType === 'close-up') {
+    // More squared format for close-ups
+    width = 768;
+    height = 768;
+  }
+  
+  return generateImage(finalPrompt, apiKey, {
+    width,
+    height,
+    num_inference_steps: 4, // Balance between quality and speed
+    negativePrompt
+  });
+};
+
+/**
+ * Default video generation function that uses the most appropriate model
+ * Currently defaults to using Flux Schnell for image generation
+ */
+export const generateVideo = async (
+  prompt: string,
+  apiKey: string,
+  options: any = {}
+): Promise<string> => {
+  // For now, we'll generate a static image with Flux Schnell
+  // In the future, this could be expanded to select the appropriate video model
+  
+  // Add video-specific enhancements to the prompt
+  const enhancedPrompt = `${prompt}. Cinematic frame, film still, movie scene, professional photography, high quality`;
+  
+  return generateImage(enhancedPrompt, apiKey, {
+    width: 1024,
+    height: 576, // 16:9 aspect ratio
+    num_inference_steps: 4
+  });
+};

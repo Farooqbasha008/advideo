@@ -6,11 +6,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import { ChevronLeft, Download, Save, Play, Wand2, Lightbulb, Sparkles } from 'lucide-react';
+import { ChevronLeft, Download, Save, Play, Wand2, Lightbulb, Sparkles, ImageIcon } from 'lucide-react';
 import { StoryboardScene } from '@/lib/videoGeneration';
 import { ScriptScene } from '@/lib/types';
 import { determineShotType, planCameraMovement, maintainContinuity } from '@/lib/videoGeneration';
+import { generateStoryboardPreview } from '@/lib/falai';
 
 interface StoryboardPageState {
   script: {
@@ -35,6 +37,7 @@ const StoryboardPage: React.FC = () => {
   const [previewUrls, setPreviewUrls] = useState<Record<number, string>>({});
   const [activeTab, setActiveTab] = useState<string>('storyboard');
   const [aiPrompt, setAiPrompt] = useState<string>('');
+  const [falaiKey, setFalaiKey] = useState<string>('');
   
   // Initialize from location state
   useEffect(() => {
@@ -52,6 +55,12 @@ const StoryboardPage: React.FC = () => {
       // No script data provided, redirect to script generation
       toast.error("No script data found");
       navigate('/script-generation');
+    }
+    
+    // Load FAL.ai API key from localStorage if available
+    const savedFalaiKey = localStorage.getItem('falai_api_key');
+    if (savedFalaiKey) {
+      setFalaiKey(savedFalaiKey);
     }
   }, [location, navigate]);
   
@@ -87,31 +96,44 @@ const StoryboardPage: React.FC = () => {
     setStoryboard(newStoryboard);
   };
   
-  // Generate preview for a scene
+  // Handle FAL.ai API key update
+  const handleSaveFalaiKey = () => {
+    if (falaiKey) {
+      localStorage.setItem('falai_api_key', falaiKey);
+      toast.success('FAL.ai API key saved');
+    } else {
+      toast.error('Please enter a valid API key');
+    }
+  };
+  
+  // Generate preview for a scene using FAL.ai Flux
   const handleGeneratePreview = async (sceneIndex: number): Promise<string | null> => {
     if (!scriptData) return null;
+    
+    // Check if API key is available
+    if (!falaiKey) {
+      toast.error('FAL.ai API key required', {
+        description: 'Please enter your API key in the AI Assistant tab',
+        action: {
+          label: 'Go to Settings',
+          onClick: () => setActiveTab('ai')
+        }
+      });
+      return null;
+    }
     
     setIsLoading(true);
     
     try {
-      // In a real implementation, this would call an AI image generation service
-      // For now, we'll simulate with a placeholder image
-      await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate API call
-      
       const scene = scriptData.scenes[sceneIndex];
       const storyboardParams = storyboard[sceneIndex];
       
-      // Construct a more detailed prompt based on script and storyboard parameters
-      const enhancedPrompt = `${scene.textToVideoPrompt} 
-      Shot type: ${storyboardParams.shotType}. 
-      Camera movement: ${storyboardParams.cameraMovement}. 
-      ${storyboardParams.environmentType} scene during ${storyboardParams.timeOfDay} 
-      with ${storyboardParams.lightingConditions}. 
-      Visual style: ${storyboardParams.visualContinuity.colorPalette}.`;
-      
-      // For demo, generate a placeholder image URL
-      // In production, this would be the result of the AI image generation
-      const imageUrl = `https://picsum.photos/seed/${encodeURIComponent(enhancedPrompt.substring(0, 20))}/800/450`;
+      // Call FAL.ai API to generate the image
+      const imageUrl = await generateStoryboardPreview(
+        storyboardParams,
+        scene.textToVideoPrompt,
+        falaiKey
+      );
       
       // Save the preview URL
       setPreviewUrls(prev => ({
@@ -119,11 +141,41 @@ const StoryboardPage: React.FC = () => {
         [sceneIndex]: imageUrl
       }));
       
+      toast.success('Preview generated successfully');
       return imageUrl;
     } catch (error) {
       console.error('Error generating preview:', error);
-      toast.error('Failed to generate preview');
+      toast.error('Failed to generate preview', {
+        description: error instanceof Error ? error.message : 'Unknown error'
+      });
       return null;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  // Generate previews for all scenes
+  const handleGenerateAllPreviews = async () => {
+    if (!scriptData || !falaiKey) {
+      toast.error('FAL.ai API key required');
+      setActiveTab('ai');
+      return;
+    }
+    
+    setIsLoading(true);
+    toast.info('Generating previews for all scenes...');
+    
+    try {
+      for (let i = 0; i < storyboard.length; i++) {
+        await handleGeneratePreview(i);
+        // Add a small delay between requests to avoid rate limiting
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+      
+      toast.success('All previews generated');
+    } catch (error) {
+      console.error('Error generating previews:', error);
+      toast.error('Failed to generate all previews');
     } finally {
       setIsLoading(false);
     }
@@ -175,7 +227,8 @@ const StoryboardPage: React.FC = () => {
     
     const downloadData = {
       script: scriptData,
-      storyboard: storyboard
+      storyboard: storyboard,
+      previewUrls: previewUrls
     };
     
     const blob = new Blob([JSON.stringify(downloadData, null, 2)], { type: 'application/json' });
@@ -196,7 +249,8 @@ const StoryboardPage: React.FC = () => {
     navigate('/editor', {
       state: {
         script: scriptData,
-        storyboard: storyboard
+        storyboard: storyboard,
+        previewUrls: previewUrls
       }
     });
   };
@@ -241,6 +295,16 @@ const StoryboardPage: React.FC = () => {
               </div>
             </div>
             <div className="flex items-center space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleGenerateAllPreviews}
+                disabled={isLoading || !falaiKey}
+                className="border-white/10 hover:bg-white/10"
+              >
+                <ImageIcon className="h-4 w-4 mr-1" />
+                Generate All Previews
+              </Button>
               <Button
                 variant="outline"
                 size="sm"
@@ -349,6 +413,33 @@ const StoryboardPage: React.FC = () => {
                 </div>
                 
                 <div className="space-y-4">
+                  {/* FAL.ai API Key Input */}
+                  <div className="space-y-2">
+                    <Label htmlFor="falai_api_key" className="text-white">FAL.ai API Key</Label>
+                    <div className="flex space-x-2">
+                      <Input
+                        id="falai_api_key"
+                        type="password"
+                        placeholder="Enter your FAL.ai API key for Flux Schnell"
+                        value={falaiKey}
+                        onChange={(e) => setFalaiKey(e.target.value)}
+                        className="flex-1 bg-[#0E0E0E] border-white/20 text-white"
+                      />
+                      <Button 
+                        onClick={handleSaveFalaiKey}
+                        className="bg-[#D7F266] hover:bg-[#D7F266]/90 text-[#151514]"
+                      >
+                        Save
+                      </Button>
+                    </div>
+                    <p className="text-xs text-white/60">
+                      Your API key is stored locally and used to generate photorealistic previews with Flux Schnell.
+                      <a href="https://fal.ai/models" target="_blank" rel="noopener noreferrer" className="underline ml-2">
+                        Get a key at fal.ai
+                      </a>
+                    </p>
+                  </div>
+                
                   <div className="space-y-2">
                     <Label htmlFor="aiPrompt" className="text-white">Ask AI for visual refinement suggestions</Label>
                     <Textarea
