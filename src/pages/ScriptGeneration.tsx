@@ -105,7 +105,7 @@ interface ChatSession {
 const ScriptGeneration: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([{
     role: 'assistant',
-    content: 'Hi there! I can help you create a video. Describe your story, desired duration, and any specific style preferences. The more details you provide, the better the result will be!',
+    content: 'Welcome to your AI-powered Ad Video Creator! I specialize in creating compelling commercial video scripts that drive conversions. Tell me about your product, target audience, key message, and desired call-to-action. The more marketing details you provide, the more effective your ad will be!',
     timestamp: new Date()
   }]);
   const [inputMessage, setInputMessage] = useState('');
@@ -120,9 +120,9 @@ const ScriptGeneration: React.FC = () => {
   const [scriptParams, setScriptParams] = useState<VideoScriptParams>({
     prompt: '',
     numScenes: 6,
-    style: 'Cinematic',
+    style: 'Commercial',
     voiceover: true,
-    music: 'Ambient',
+    music: 'Corporate',
     characters: '',
     restrictions: ''
   });
@@ -160,7 +160,7 @@ const ScriptGeneration: React.FC = () => {
   // Create system message
   const createSystemMessage = (): Message => ({
     role: 'system',
-    content: `I'm a highly advanced AI assistant specialized in professional short video script generation. I'll help you create a structured, production-ready video script with ${scriptParams.numScenes} scenes, each lasting 5 seconds. Let's start by discussing your video concept.`,
+    content: `I'm a highly advanced AI assistant specialized in creating high-converting commercial video scripts for marketers and advertisers. I'll help you create a structured, production-ready ad video script with ${scriptParams.numScenes} scenes, each lasting 5 seconds. Let's start by discussing your product, target audience, and marketing objectives.`,
     timestamp: new Date()
   });
   
@@ -306,51 +306,50 @@ const ScriptGeneration: React.FC = () => {
     const { generateChatResponse } = await import('@/lib/groq');
     
     // Create the system prompt
-    const systemPrompt = `You are a highly advanced AI assistant specialized in professional short video script generation. Your role is Cinematic Director & Video Production Specialist with expert-level knowledge (Level 280) in screenwriting, scene structure, cinematic pacing, and AI content generation. You are designed to generate exactly ${scriptParams.numScenes} scenes for a video, each lasting 5 seconds.
+    const systemPrompt = `You are a highly advanced AI assistant specialized in creating high-converting commercial video scripts for advertising and marketing. Your role is Senior Creative Director & Marketing Strategist with expert-level knowledge (Level 280) in advertising psychology, conversion optimization, brand messaging, and commercial video production. You are designed to generate exactly ${scriptParams.numScenes} scenes for a commercial video, each lasting 5 seconds.
 
-For text-to-video prompts, follow these strict guidelines:
+For commercial text-to-video prompts, follow these advertising-focused guidelines:
 
-VISUAL PROMPT STRUCTURE:
-1. Main Subject & Action:
-   - Clearly describe the main subject and their action
-   - Use present continuous tense (e.g., "a man is walking")
-   - Specify exact details like age, clothing, expressions
+COMMERCIAL VISUAL PROMPT STRUCTURE:
+1. Product/Service Focus:
+   - Always highlight the product or service being advertised
+   - Show clear product benefits and features in action
+   - Include brand elements when possible (logos, colors, packaging)
 
-2. Setting & Environment:
-   - Detail the location (indoor/outdoor, specific place)
-   - Include time of day and weather conditions
-   - Describe lighting conditions and atmosphere
+2. Target Audience Appeal:
+   - Feature relatable people from the target demographic
+   - Show aspirational lifestyle or problem-solving scenarios
+   - Use emotional triggers (happiness, success, relief, excitement)
 
-3. Camera Perspective:
-   - Specify shot type (close-up, medium, wide shot)
-   - Define camera movement (static, panning, tracking)
-   - Include camera angle (eye-level, low angle, high angle)
+3. Commercial Camera Work:
+   - Use professional commercial shot types (product close-ups, lifestyle shots)
+   - Employ dynamic movements that create energy and engagement
+   - Include hero shots that showcase the product prominently
 
-4. Visual Style:
-   - Mention color palette and tone
-   - Include specific visual effects or transitions
-   - Reference cinematic qualities (film grain, depth of field)
+4. Brand-Appropriate Style:
+   - Maintain consistent brand colors and aesthetic
+   - Use lighting that enhances product appeal
+   - Create polished, professional commercial look
 
-PROMPT FORMAT EXAMPLE:
-"A woman in a red dress is walking through a neon-lit city street, medium tracking shot, shallow depth of field, warm cyberpunk color palette, volumetric lighting, night time scene with rain, cinematic 8K quality"
+COMMERCIAL PROMPT FORMAT EXAMPLE:
+"A satisfied customer is using the product with a genuine smile, medium shot transitioning to product close-up, bright commercial lighting, clean modern background, professional advertising style with brand colors, high-quality commercial production"
 
-AVOID:
-- Abstract concepts or metaphors
-- Non-visual descriptions
-- Complex narratives in single shots
-- Unrealistic camera movements
-- Vague or ambiguous terms
+AVOID IN COMMERCIALS:
+- Unclear product visibility
+- Negative emotions or scenarios
+- Cluttered or distracting backgrounds
+- Amateur or unprofessional aesthetics
+- Generic stock footage appearance
 
-VOICEOVER PROMPT GUIDELINES:
-When creating voiceover prompts, include a specific voice recommendation from the Groq Cloud voice library based on the content:
-- For narration or educational content: Recommend Fritz, Jennifer, or Mason (clear, professional voices)
-- For dramatic or intense scenes: Recommend Thunder, Atlas, or Mikail (deep, powerful voices)
-- For warm, friendly content: Recommend Aaliyah, Judy, or Chip (warm, conversational voices)
-- For storytelling: Recommend Basil, Cillian, or Celeste (engaging, expressive voices)
-- For children's content: Recommend Cheyenne, Deedee, or Quinn (energetic, youthful voices)
-- For luxury or sophisticated content: Recommend Adelaide, Eleanor, or Cillian (refined, elegant voices)
+COMMERCIAL VOICEOVER GUIDELINES:
+Create compelling ad copy that follows proven advertising formulas. Include voice recommendations:
+- For professional/corporate ads: Recommend Fritz, Jennifer, or Mason (authoritative, trustworthy)
+- For energetic/exciting products: Recommend Thunder, Atlas, or Mikail (dynamic, powerful)
+- For lifestyle/consumer products: Recommend Aaliyah, Judy, or Chip (warm, relatable)
+- For luxury/premium brands: Recommend Adelaide, Eleanor, or Cillian (sophisticated, refined)
+- For tech/innovation: Recommend Basil or Celeste (modern, intelligent)
 
-Include the voice name in the voiceoverPrompt field like this: "[Voice: NAME] Actual voiceover text here"
+Include the voice name in the voiceoverPrompt field like this: "[Voice: NAME] Actual commercial copy here"
 
 OUTPUT FORMAT (STRICT JSON SCHEMA):
 {
@@ -445,20 +444,20 @@ Each scene's textToVideoPrompt must follow the structured format and guidelines 
       const { generateChatResponse } = await import('@/lib/groq');
       
       // Create the system prompt
-      const systemPrompt = `You are a highly advanced AI assistant specialized in professional short video script generation. Your role is Cinematic Director & Video Production Specialist with expert-level knowledge (Level 280) in screenwriting, scene structure, cinematic pacing, and AI content generation. You are designed to generate exactly ${scriptParams.numScenes} scenes for a video, each lasting 5 seconds.
+      const systemPrompt = `You are a highly advanced AI assistant specialized in commercial advertising video script generation. Your role is Senior Creative Director & Marketing Strategist with expert-level knowledge (Level 280) in advertising copywriting, commercial production, brand storytelling, and persuasive video content creation. You are designed to generate exactly ${scriptParams.numScenes} scenes for a commercial video, each lasting 5 seconds.
 
-For text-to-video prompts, follow these strict guidelines:
+For commercial text-to-video prompts, follow these strict advertising guidelines:
 
-VISUAL PROMPT STRUCTURE:
-1. Main Subject & Action:
-   - Clearly describe the main subject and their action
-   - Use present continuous tense (e.g., "a man is walking")
-   - Specify exact details like age, clothing, expressions
+COMMERCIAL VISUAL PROMPT STRUCTURE:
+1. Product/Brand Focus & Action:
+   - Clearly showcase the product or service in action
+   - Use present continuous tense highlighting benefits (e.g., "a customer is enjoying")
+   - Specify product details, brand elements, and customer interactions
 
-2. Setting & Environment:
-   - Detail the location (indoor/outdoor, specific place)
-   - Include time of day and weather conditions
-   - Describe lighting conditions and atmosphere
+2. Commercial Setting & Brand Environment:
+   - Detail professional, brand-appropriate locations
+   - Include optimal lighting for product visibility
+   - Describe aspirational atmosphere that appeals to target audience
 
 3. Camera Perspective:
    - Specify shot type (close-up, medium, wide shot)
@@ -1168,10 +1167,10 @@ Each scene's textToVideoPrompt must follow the structured format and guidelines 
               <TabsContent value="chat" className="space-y-6">
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="prompt" className="text-white">Video Concept</Label>
+                    <Label htmlFor="prompt" className="text-white">Ad Campaign Brief</Label>
                     <Textarea
                       id="prompt"
-                      placeholder="Describe your video concept..."
+                      placeholder="Describe your product/service, target audience, key benefits, and desired call-to-action..."
                       value={scriptParams.prompt}
                       onChange={(e) => handleScriptParamChange('prompt', e.target.value)}
                       className="min-h-[100px] bg-[#0E0E0E] border-white/20 text-white"
@@ -1204,13 +1203,7 @@ Each scene's textToVideoPrompt must follow the structured format and guidelines 
                         <SelectValue placeholder="Select style" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Cinematic">Cinematic</SelectItem>
-                        <SelectItem value="Animated">Animated</SelectItem>
-                        <SelectItem value="Documentary">Documentary</SelectItem>
                         <SelectItem value="Commercial">Commercial</SelectItem>
-                        <SelectItem value="Social Media">Social Media</SelectItem>
-                        <SelectItem value="Vlog">Vlog</SelectItem>
-                        <SelectItem value="Tutorial">Tutorial</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -1249,10 +1242,10 @@ Each scene's textToVideoPrompt must follow the structured format and guidelines 
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="characters" className="text-white">Characters (Optional)</Label>
+                    <Label htmlFor="characters" className="text-white">Spokesperson/Actors (Optional)</Label>
                     <Input
                       id="characters"
-                      placeholder="E.g. John: male narrator, Sarah: customer"
+                      placeholder="E.g. Professional spokesperson, satisfied customer, product expert"
                       value={scriptParams.characters}
                       onChange={(e) => handleScriptParamChange('characters', e.target.value)}
                       className="bg-[#0E0E0E] border-white/20 text-white"
@@ -1260,10 +1253,10 @@ Each scene's textToVideoPrompt must follow the structured format and guidelines 
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="restrictions" className="text-white">Restrictions (Optional)</Label>
+                    <Label htmlFor="restrictions" className="text-white">Brand Guidelines (Optional)</Label>
                     <Input
                       id="restrictions"
-                      placeholder="E.g. no outdoor scenes, family-friendly"
+                      placeholder="E.g. must include logo, avoid competitor mentions, family-friendly tone"
                       value={scriptParams.restrictions}
                       onChange={(e) => handleScriptParamChange('restrictions', e.target.value)}
                       className="bg-[#0E0E0E] border-white/20 text-white"
