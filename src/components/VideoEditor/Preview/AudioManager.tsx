@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { TimelineItem } from '../VideoEditor';
 import { toast } from 'sonner';
@@ -60,7 +59,7 @@ const AudioManager: React.FC<AudioManagerProps> = ({
     });
     
     audioElement.addEventListener('error', async (e) => {
-      console.error('Audio loading error:', audio.id, e);
+      console.error('Audio loading error:', audio.id, e, audioElement.error);
       
       // Check if this is a blob URL that might have become invalid
       if (audio.src.startsWith('blob:') && audio.src.includes('#blobId=')) {
@@ -84,9 +83,29 @@ const AudioManager: React.FC<AudioManagerProps> = ({
         }
       }
       
+      // For external URLs, try to fetch via a CORS proxy
+      if (!audio.src.startsWith('blob:') && !audio.src.startsWith('data:')) {
+        try {
+          // Try using a CORS proxy or fetch directly
+          const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(audio.src)}`;
+          const response = await fetch(proxyUrl);
+          
+          if (response.ok) {
+            const blob = await response.blob();
+            const blobUrl = URL.createObjectURL(blob);
+            console.log('Successfully fetched audio via proxy:', audio.id);
+            audioElement.src = blobUrl;
+            audioElement.load();
+            return;
+          }
+        } catch (proxyError) {
+          console.error('Failed to fetch audio via proxy:', proxyError);
+        }
+      }
+      
       setAudioStates(prev => new Map(prev).set(audio.id, 'error'));
       toast.error('Error loading audio', {
-        description: `Could not load audio: ${audio.name}`,
+        description: `Could not load audio: ${audio.name}. The file may be inaccessible due to CORS restrictions.`,
       });
     });
     
@@ -118,7 +137,25 @@ const AudioManager: React.FC<AudioManagerProps> = ({
           audioElement.src = audio.src;
         }
       } else {
-        audioElement.src = audio.src;
+        // For external URLs, try to fetch and create blob URL to avoid CORS issues
+        if (!audio.src.startsWith('blob:') && !audio.src.startsWith('data:')) {
+          try {
+            const response = await fetch(`https://corsproxy.io/?${encodeURIComponent(audio.src)}`);
+            if (response.ok) {
+              const blob = await response.blob();
+              const blobUrl = URL.createObjectURL(blob);
+              audioElement.src = blobUrl;
+            } else {
+              // If proxy fails, try direct URL
+              audioElement.src = audio.src;
+            }
+          } catch (error) {
+            console.warn('Could not fetch audio via proxy, trying direct URL:', error);
+            audioElement.src = audio.src;
+          }
+        } else {
+          audioElement.src = audio.src;
+        }
       }
       
       // Use crossOrigin for better compatibility
@@ -142,7 +179,7 @@ const AudioManager: React.FC<AudioManagerProps> = ({
       console.error('Error setting audio source:', error);
       setAudioStates(prev => new Map(prev).set(audio.id, 'error'));
       toast.error('Invalid audio source', {
-        description: `Could not load audio: ${audio.name}`,
+        description: `Could not load audio: ${audio.name}. Please check if the audio file is accessible.`,
       });
       return null;
     }
