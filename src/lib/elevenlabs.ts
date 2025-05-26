@@ -46,29 +46,65 @@ export async function generateSound(
 
   try {
     const client = getClient(apiKey);
-    const response = await client.textToSoundEffects.convert({
-      text: prompt
-    });
-
-    // Convert the stream to an array buffer
-    const chunks: Uint8Array[] = [];
-    for await (const chunk of response) {
-      chunks.push(new Uint8Array(chunk));
-    }
     
-    // Concatenate all chunks into a single array buffer
-    const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
-    const result = new Uint8Array(totalLength);
-    let offset = 0;
-    for (const chunk of chunks) {
-      result.set(chunk, offset);
-      offset += chunk.length;
+    // Make a direct API call to the appropriate endpoint based on the sound type
+    let response;
+    if (options.type === 'bgm') {
+      // Use the sound generation API endpoint for background music
+      const apiEndpoint = 'https://api.elevenlabs.io/v1/sound-generation';
+      const headers = {
+        'xi-api-key': apiKey,
+        'Content-Type': 'application/json'
+      };
+      
+      // Build the request body with correct parameter names according to the API docs
+      const body = {
+        text: prompt,
+        duration_seconds: options.duration,
+        prompt_influence: 0.7 // Higher influence for more consistent music
+      };
+      
+      const fetchResponse = await fetch(apiEndpoint, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(body)
+      });
+      
+      if (!fetchResponse.ok) {
+        const errorText = await fetchResponse.text();
+        throw new Error(`Failed to generate music: ${fetchResponse.status} ${errorText}`);
+      }
+      
+      // Get the audio data directly as a stream
+      const audioBlob = await fetchResponse.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+      return audioUrl;
+    } else {
+      // Use sound effects for other sounds
+      response = await client.textToSoundEffects.convert({
+        text: prompt
+      });
+      
+      // Convert the stream to an array buffer
+      const chunks: Uint8Array[] = [];
+      for await (const chunk of response) {
+        chunks.push(new Uint8Array(chunk));
+      }
+      
+      // Concatenate all chunks into a single array buffer
+      const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
+      const result = new Uint8Array(totalLength);
+      let offset = 0;
+      for (const chunk of chunks) {
+        result.set(chunk, offset);
+        offset += chunk.length;
+      }
+      
+      // Convert to blob and create URL
+      const blob = new Blob([result.buffer], { type: 'audio/mpeg' });
+      const audioUrl = URL.createObjectURL(blob);
+      return audioUrl;
     }
-    
-    // Convert to blob and create URL
-    const blob = new Blob([result.buffer], { type: 'audio/mpeg' });
-    const url = URL.createObjectURL(blob);
-    return url;
   } catch (error) {
     console.error('Error generating sound:', error);
     throw error instanceof Error 

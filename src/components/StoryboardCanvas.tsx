@@ -43,7 +43,8 @@ import {
   Maximize,
   Loader2,
   Film,
-  Pencil
+  Pencil,
+  Download
 } from 'lucide-react';
 import { Toast } from '@/components/ui/toast';
 import { StoryboardScene } from '@/lib/videoGeneration';
@@ -64,6 +65,7 @@ interface StoryboardCanvasProps {
   onUpdateStoryboard: (storyboard: StoryboardScene[]) => void;
   onGeneratePreview?: (sceneIndex: number) => Promise<string | null>;
   onGenerateVideo?: (sceneIndex: number) => void;
+  onExportScene?: (sceneIndex: number) => void;
   isLoading?: boolean;
   previewUrls?: Record<number, string>;
   videoUrls?: Record<number, string>;
@@ -78,6 +80,7 @@ const StoryboardCanvas: React.FC<StoryboardCanvasProps> = ({
   onUpdateStoryboard,
   onGeneratePreview,
   onGenerateVideo,
+  onExportScene,
   isLoading = false,
   previewUrls = {},
   videoUrls = {},
@@ -543,15 +546,15 @@ const StoryboardCanvas: React.FC<StoryboardCanvasProps> = ({
                 )}
               </div>
               
-              {editingIndex !== index && (
+              {onExportScene && editingIndex !== index && (
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
-                  className="text-xs"
-                  onClick={() => handleEdit(index)}
+                  className="text-xs bg-[#D7F266]/10 text-[#D7F266] hover:bg-[#D7F266]/20 border-[#D7F266]/20"
+                  onClick={() => onExportScene(index)}
                 >
-                  <Pencil className="h-3 w-3 mr-1" />
-                  Edit Scene
+                  <Download className="h-3 w-3 mr-1" />
+                  Export Scene
                 </Button>
               )}
             </CardFooter>

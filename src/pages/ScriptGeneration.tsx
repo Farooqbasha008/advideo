@@ -210,6 +210,7 @@ const ScriptGeneration: React.FC = () => {
   useEffect(() => {
     const savedGroqApiKey = localStorage.getItem('groq_api_key');
     const savedFalaiApiKey = localStorage.getItem('falai_api_key');
+    const savedElevenlabsApiKey = localStorage.getItem('elevenlabs_api_key');
     const savedSupabaseUrl = localStorage.getItem('supabase_url');
     const savedSupabaseKey = localStorage.getItem('supabase_key');
     
@@ -224,6 +225,10 @@ const ScriptGeneration: React.FC = () => {
 
     if (savedFalaiApiKey) {
       setFalaiApiKey(savedFalaiApiKey);
+    }
+    
+    if (savedElevenlabsApiKey) {
+      setElevenlabsApiKey(savedElevenlabsApiKey);
     }
     
     if (savedSupabaseUrl) {
@@ -258,6 +263,11 @@ const ScriptGeneration: React.FC = () => {
     // Save FAL.ai API key if provided
     if (falaiApiKey.trim()) {
       localStorage.setItem('falai_api_key', falaiApiKey);
+    }
+    
+    // Save ElevenLabs API key if provided
+    if (elevenlabsApiKey.trim()) {
+      localStorage.setItem('elevenlabs_api_key', elevenlabsApiKey);
     }
     
     // Save Supabase credentials if provided
@@ -328,24 +338,28 @@ COMMERCIAL VISUAL PROMPT STRUCTURE:
    - Always highlight the product or service being advertised
    - Show clear product benefits and features in action
    - Include brand elements when possible (logos, colors, packaging)
+   - Ensure photorealistic rendering of product details and textures
 
 2. Target Audience Appeal:
    - Feature relatable people from the target demographic
    - Show aspirational lifestyle or problem-solving scenarios
    - Use emotional triggers (happiness, success, relief, excitement)
+   - Maintain natural, realistic human appearances and expressions
 
 3. Commercial Camera Work:
    - Use professional commercial shot types (product close-ups, lifestyle shots)
    - Employ dynamic movements that create energy and engagement
    - Include hero shots that showcase the product prominently
+   - Create depth with realistic lighting and shadows
 
 4. Brand-Appropriate Style:
    - Maintain consistent brand colors and aesthetic
    - Use lighting that enhances product appeal
    - Create polished, professional commercial look
+   - Emphasize high-fidelity, photorealistic rendering quality
 
 COMMERCIAL PROMPT FORMAT EXAMPLE:
-"A satisfied customer is using the product with a genuine smile, medium shot transitioning to product close-up, bright commercial lighting, clean modern background, professional advertising style with brand colors, high-quality commercial production"
+"A satisfied customer is using the product with a genuine smile, medium shot transitioning to product close-up, bright commercial lighting, clean modern background, professional advertising style with brand colors, high-quality commercial production, photorealistic rendering with detailed textures and natural lighting"
 
 AVOID IN COMMERCIALS:
 - Unclear product visibility
@@ -390,6 +404,9 @@ IMPORTANT RENDERING CONSIDERATIONS:
 - Focus on achievable camera movements
 - Maintain consistent lighting and color schemes
 - Use realistic environments and settings
+- Prioritize photorealistic rendering of all elements (faces, products, environments)
+- Ensure high-detail, realistic textures and materials
+- Include terms like "photorealistic", "hyper-realistic" or "high-fidelity" in visual prompts
 
 PROMPT INPUT PARAMETERS FROM USER:
 - prompt: ${scriptParams.prompt || inputMessage}
@@ -466,24 +483,28 @@ COMMERCIAL VISUAL PROMPT STRUCTURE:
    - Clearly showcase the product or service in action
    - Use present continuous tense highlighting benefits (e.g., "a customer is enjoying")
    - Specify product details, brand elements, and customer interactions
+   - Ensure photorealistic rendering with high-detail textures and materials
 
 2. Commercial Setting & Brand Environment:
    - Detail professional, brand-appropriate locations
    - Include optimal lighting for product visibility
    - Describe aspirational atmosphere that appeals to target audience
+   - Create realistic environments with proper scale and proportions
 
 3. Camera Perspective:
    - Specify shot type (close-up, medium, wide shot)
    - Define camera movement (static, panning, tracking)
    - Include camera angle (eye-level, low angle, high angle)
+   - Use terms like "photorealistic" or "hyper-realistic" in descriptions
 
 4. Visual Style:
    - Mention color palette and tone
    - Include specific visual effects or transitions
    - Reference cinematic qualities (film grain, depth of field)
+   - Emphasize high-fidelity rendering with realistic lighting and shadows
 
 PROMPT FORMAT EXAMPLE:
-"A young woman in a red dress is walking through a neon-lit city street, medium tracking shot, shallow depth of field, warm cyberpunk color palette, volumetric lighting, night time scene with rain, cinematic 8K quality"
+"A young woman in a red dress is walking through a neon-lit city street, medium tracking shot, shallow depth of field, warm cyberpunk color palette, volumetric lighting, night time scene with rain, cinematic 8K quality, photorealistic details with lifelike textures and materials"
 
 AVOID:
 - Abstract concepts or metaphors
@@ -518,6 +539,9 @@ IMPORTANT RENDERING CONSIDERATIONS:
 - Focus on achievable camera movements
 - Maintain consistent lighting and color schemes
 - Use realistic environments and settings
+- Prioritize photorealistic rendering of all elements (faces, products, environments)
+- Ensure high-detail, realistic textures and materials
+- Include terms like "photorealistic", "hyper-realistic" or "high-fidelity" in visual prompts
 
 PROMPT INPUT PARAMETERS FROM USER:
 - prompt: ${scriptParams.prompt || inputMessage}
@@ -1315,6 +1339,18 @@ Each scene's textToVideoPrompt must follow the structured format and guidelines 
                       placeholder="Enter your FAL.ai API key" 
                       value={falaiApiKey} 
                       onChange={(e) => setFalaiApiKey(e.target.value)}
+                      className="bg-[#0E0E0E] border-white/20 text-white"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="elevenlabs-api-key-settings" className="text-white">ElevenLabs API Key</Label>
+                    <Input 
+                      id="elevenlabs-api-key-settings"
+                      type="password" 
+                      placeholder="Enter your ElevenLabs API key" 
+                      value={elevenlabsApiKey} 
+                      onChange={(e) => setElevenlabsApiKey(e.target.value)}
                       className="bg-[#0E0E0E] border-white/20 text-white"
                     />
                   </div>

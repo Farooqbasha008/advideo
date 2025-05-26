@@ -9,13 +9,18 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import { ChevronLeft, Download, Save, Play, Wand2, Lightbulb, Sparkles, ImageIcon, User, X, Loader2, Film } from 'lucide-react';
+import { ChevronLeft, Download, Save, Play, Wand2, Lightbulb, Sparkles, ImageIcon, User, X, Loader2, Film, FolderDown } from 'lucide-react';
 import { StoryboardScene, Character } from '@/lib/videoGeneration';
 import { ScriptScene } from '@/lib/types';
 import { determineShotType, planCameraMovement, maintainContinuity, enhancePromptWithVisualGuidelines } from '@/lib/videoGeneration';
 import { generateStoryboardPreview, generateCharacterConsistentImage, generateVideoFromImage, generateInstantCharacterImage } from '@/lib/falai';
 import { EnhancedCharacter, getCameraInstructionFromStoryboard } from '@/lib/characterConsistency';
 import { cn } from '@/lib/utils';
+import AssetExporter from '@/components/AssetExporter';
+import { generateSpeech } from '@/lib/groqTTS';
+import { generateSound } from '@/lib/elevenlabs';
+import JSZip from 'jszip';
+import { saveAs } from 'file-saver';
 
 interface StoryboardPageState {
   script: {
@@ -56,6 +61,12 @@ const StoryboardPage: React.FC = () => {
   
   // Add the reordering state and function
   const [reordering, setReordering] = useState(false);
+  
+  // Add state for the Asset Exporter dialog
+  const [isAssetExporterOpen, setIsAssetExporterOpen] = useState(false);
+  
+  // Add state for exporting a single scene
+  const [isExportingSingleScene, setIsExportingSingleScene] = useState<number | null>(null);
   
   // Initialize from location state
   useEffect(() => {
@@ -422,6 +433,147 @@ const StoryboardPage: React.FC = () => {
     }
   };
   
+  // Handle opening the Asset Exporter dialog
+  const handleOpenAssetExporter = () => {
+    if (!scriptData) {
+      toast.error('No script data available');
+      return;
+    }
+    
+    if (scriptData.scenes.length === 0) {
+      toast.error('No scenes available to export');
+      return;
+    }
+    
+    if (Object.keys(previewUrls).length === 0) {
+      toast.error('Please generate at least one preview before exporting assets');
+      return;
+    }
+    
+    setIsAssetExporterOpen(true);
+  };
+  
+  // Add a function to export a single scene folder
+  const handleExportScene = async (sceneIndex: number) => {
+    if (!scriptData) return;
+    
+    // Check if we have a preview image for this scene
+    if (!previewUrls[sceneIndex]) {
+      toast.error('Please generate a preview image for this scene first');
+      return;
+    }
+
+    // Check for API keys
+    const groqApiKey = localStorage.getItem('groq_api_key');
+    const elevenlabsApiKey = localStorage.getItem('elevenlabs_api_key');
+    
+    if (!groqApiKey) {
+      toast.error('Groq API key is required for voiceover generation', {
+        description: 'Please set your API key in the Asset Export dialog',
+        action: {
+          label: 'Open Export',
+          onClick: () => setIsAssetExporterOpen(true)
+        }
+      });
+      return;
+    }
+
+    if (!elevenlabsApiKey) {
+      toast.error('ElevenLabs API key is required for background music generation', {
+        description: 'Please set your API key in the Asset Export dialog',
+        action: {
+          label: 'Open Export',
+          onClick: () => setIsAssetExporterOpen(true)
+        }
+      });
+      return;
+    }
+    
+    setIsExportingSingleScene(sceneIndex);
+    toast.info(`Exporting scene ${sceneIndex + 1}...`);
+    
+    try {
+      const scene = scriptData.scenes[sceneIndex];
+      const zip = new JSZip();
+      const sceneFolder = zip.folder(`scene-${sceneIndex + 1}`);
+      
+      if (!sceneFolder) {
+        throw new Error('Failed to create scene folder');
+      }
+      
+      // Add visual content - prioritize video over image when available
+      if (videoUrls[sceneIndex]) {
+        // If video is available, use it as the primary visual
+        const response = await fetch(videoUrls[sceneIndex]);
+        const blob = await response.blob();
+        sceneFolder.file('visual.mp4', blob);
+      } else if (previewUrls[sceneIndex]) {
+        // Otherwise fall back to the image
+        const response = await fetch(previewUrls[sceneIndex]);
+        const blob = await response.blob();
+        sceneFolder.file('visual.jpg', blob);
+      }
+      
+      // Generate and add voiceover
+      const voicePrompt = scene.voiceoverPrompt;
+      const voiceUrl = await generateSpeech(
+        voicePrompt, 
+        groqApiKey, 
+        { 
+          voiceId: 'Fritz', // Default voice
+          trimSilence: true 
+        }
+      );
+      
+      const voiceResponse = await fetch(voiceUrl);
+      const voiceBlob = await voiceResponse.blob();
+      sceneFolder.file('voiceover.mp3', voiceBlob);
+      
+      // Generate and add background music
+      const musicPrompt = scene.backgroundMusicPrompt;
+      const enhancedMusicPrompt = `Cinematic background music: ${musicPrompt}. 5-second musical piece with clear atmosphere, high-quality orchestral sound suitable for video soundtrack.`;
+      
+      const musicUrl = await generateSound(
+        enhancedMusicPrompt, 
+        elevenlabsApiKey, 
+        { 
+          type: 'bgm',
+          duration: 5 // Set to 5 seconds to match scene duration
+        }
+      );
+      
+      const musicResponse = await fetch(musicUrl);
+      const musicBlob = await musicResponse.blob();
+      sceneFolder.file('bgmusic.mp3', musicBlob);
+      
+      // Add scene info
+      const sceneInfo = {
+        sceneNumber: scene.sceneNumber,
+        setting: scene.setting,
+        textToVideoPrompt: scene.textToVideoPrompt,
+        voiceoverPrompt: scene.voiceoverPrompt,
+        backgroundMusicPrompt: scene.backgroundMusicPrompt,
+        storyboardParams: storyboard[sceneIndex],
+        exportDate: new Date().toISOString()
+      };
+      
+      sceneFolder.file('scene-info.json', JSON.stringify(sceneInfo, null, 2));
+      
+      // Generate and download zip file
+      const content = await zip.generateAsync({ type: 'blob' });
+      saveAs(content, `scene-${sceneIndex + 1}.zip`);
+      
+      toast.success(`Scene ${sceneIndex + 1} exported successfully`);
+    } catch (error) {
+      console.error('Error exporting scene:', error);
+      toast.error(`Failed to export scene ${sceneIndex + 1}`, {
+        description: error instanceof Error ? error.message : 'An unknown error occurred'
+      });
+    } finally {
+      setIsExportingSingleScene(null);
+    }
+  };
+  
   if (!scriptData) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-[#0E0E0E]">
@@ -483,34 +635,9 @@ const StoryboardPage: React.FC = () => {
             </div>
           </div>
           
-          <StoryboardCanvas
-            scenes={scriptData?.scenes || []}
-            storyboard={storyboard}
-            onUpdateStoryboard={handleUpdateStoryboard}
-            onGeneratePreview={handleGeneratePreview}
-            onGenerateVideo={handleGenerateVideoFromScene}
-            isLoading={isLoading}
-            previewUrls={previewUrls}
-            videoUrls={videoUrls}
-            instantCharacterPreviews={instantCharacterPreviews}
-            reordering={reordering}
-            setReordering={setReordering}
-          />
-          
-          <div className="flex justify-end space-x-2 mt-4">
-            <Button variant="outline" onClick={handleDownload} disabled={storyboard.length === 0}>
-              <Download className="mr-2 h-4 w-4" />
-              Download Storyboard
-            </Button>
-            <Button onClick={handleContinueToEditor} disabled={storyboard.length === 0}>
-              <Play className="mr-2 h-4 w-4" />
-              Continue to Video Editor
-            </Button>
-          </div>
-
-          {/* Add reminder about Character tab */}
+          {/* Move character reference tip to the top */}
           {!characterReferenceImage && (
-            <div className="mt-4 p-3 bg-[#1A1A1A] rounded border border-white/10">
+            <div className="mb-4 p-3 bg-[#1A1A1A] rounded border border-white/10">
               <div className="flex items-start text-sm">
                 <User className="h-4 w-4 text-[#D7F266] mt-0.5 mr-2" />
                 <p className="text-white/70">
@@ -526,6 +653,41 @@ const StoryboardPage: React.FC = () => {
               </div>
             </div>
           )}
+          
+          <StoryboardCanvas
+            scenes={scriptData?.scenes || []}
+            storyboard={storyboard}
+            onUpdateStoryboard={handleUpdateStoryboard}
+            onGeneratePreview={handleGeneratePreview}
+            onGenerateVideo={handleGenerateVideoFromScene}
+            onExportScene={handleExportScene}
+            isLoading={isLoading || isExportingSingleScene !== null}
+            previewUrls={previewUrls}
+            videoUrls={videoUrls}
+            instantCharacterPreviews={instantCharacterPreviews}
+            reordering={reordering}
+            setReordering={setReordering}
+          />
+          
+          <div className="flex justify-end space-x-2 mt-4">
+            <Button variant="outline" onClick={handleDownload} disabled={storyboard.length === 0}>
+              <Download className="mr-2 h-4 w-4" />
+              Download Storyboard
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={handleOpenAssetExporter} 
+              disabled={storyboard.length === 0 || Object.keys(previewUrls).length === 0}
+              className="bg-[#D7F266]/10 text-[#D7F266] hover:bg-[#D7F266]/20 border-[#D7F266]/20"
+            >
+              <FolderDown className="mr-2 h-4 w-4" />
+              Export Assets
+            </Button>
+            <Button onClick={handleContinueToEditor} disabled={storyboard.length === 0}>
+              <Play className="mr-2 h-4 w-4" />
+              Continue to Video Editor
+            </Button>
+          </div>
         </TabsContent>
         
         {/* Characters Tab */}
@@ -867,6 +1029,18 @@ const StoryboardPage: React.FC = () => {
           </Card>
         </TabsContent>
       </Tabs>
+      
+      {/* Asset Exporter Dialog */}
+      {scriptData && (
+        <AssetExporter 
+          isOpen={isAssetExporterOpen}
+          onClose={() => setIsAssetExporterOpen(false)}
+          scriptData={scriptData}
+          storyboard={storyboard}
+          previewUrls={previewUrls}
+          videoUrls={videoUrls}
+        />
+      )}
     </div>
   );
 };
