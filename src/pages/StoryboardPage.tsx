@@ -434,7 +434,7 @@ const StoryboardPage: React.FC = () => {
   };
   
   // Handle opening the Asset Exporter dialog
-  const handleOpenAssetExporter = () => {
+  const handleOpenAssetExporter = async () => {
     if (!scriptData) {
       toast.error('No script data available');
       return;
@@ -449,8 +449,66 @@ const StoryboardPage: React.FC = () => {
       toast.error('Please generate at least one preview before exporting assets');
       return;
     }
+
+    // Check FAL.ai API key for video generation
+    const falApiKey = localStorage.getItem('falai_api_key') || falaiKey;
+    if (!falApiKey) {
+      toast.error('FAL.ai API key required for video generation', {
+        description: 'Please set your API key in the AI Assistant tab',
+        action: {
+          label: 'Go to Settings',
+          onClick: () => setActiveTab('ai')
+        }
+      });
+      return;
+    }
     
-    setIsAssetExporterOpen(true);
+    // Count scenes with and without videos
+    const scenesWithoutVideos = scriptData.scenes
+      .map((_, index) => index)
+      .filter(index => previewUrls[index] && !videoUrls[index]);
+    
+    // If there are scenes with previews but no videos, ask if they want to generate videos
+    if (scenesWithoutVideos.length > 0) {
+      // Use toast.promise with confirm dialog
+      const shouldGenerate = window.confirm(
+        `${scenesWithoutVideos.length} scene(s) have previews but no AI video generated. Would you like to generate AI videos for these scenes before exporting assets?`
+      );
+      
+      if (shouldGenerate) {
+        setIsLoading(true);
+        toast.info(`Generating ${scenesWithoutVideos.length} videos before export. This may take a few minutes...`);
+        
+        try {
+          // Generate videos for scenes without them
+          for (const index of scenesWithoutVideos) {
+            toast.info(`Generating video for scene ${index + 1}...`, { id: `generating-${index}` });
+            await handleGenerateVideoFromScene(index);
+            toast.success(`Video for scene ${index + 1} generated!`, { id: `generating-${index}` });
+          }
+          
+          toast.success('All videos generated! Proceeding with export...');
+          setIsAssetExporterOpen(true);
+        } catch (error) {
+          console.error('Error generating videos:', error);
+          toast.error('Failed to generate all videos', {
+            description: 'You can still proceed with export using available visuals',
+            action: {
+              label: 'Continue to Export',
+              onClick: () => setIsAssetExporterOpen(true)
+            }
+          });
+        } finally {
+          setIsLoading(false);
+        }
+      } else {
+        // User chose not to generate videos, proceed with export
+        setIsAssetExporterOpen(true);
+      }
+    } else {
+      // No scenes need videos, proceed with export
+      setIsAssetExporterOpen(true);
+    }
   };
   
   // Add a function to export a single scene folder
