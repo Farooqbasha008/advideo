@@ -291,7 +291,17 @@ const StoryboardPage: React.FC = () => {
       
       // Create an enhanced prompt with camera movement instructions
       const cameraInstruction = getCameraInstructionFromStoryboard(storyboardParams);
-      const videoPrompt = `[${cameraInstruction}] ${scene.textToVideoPrompt}`;
+      
+      // Build a comprehensive video prompt with detailed visual instructions
+      let videoPrompt = `[${cameraInstruction}] ${scene.textToVideoPrompt}`;
+      
+      // Add environment and lighting details from the storyboard
+      videoPrompt += `. ${storyboardParams.environmentType === 'interior' ? 'Interior' : 'Exterior'} scene during ${storyboardParams.timeOfDay} with ${storyboardParams.lightingConditions}`;
+      
+      // Add visual style details
+      if (storyboardParams.visualContinuity && storyboardParams.visualContinuity.colorPalette) {
+        videoPrompt += `. Visual style: ${storyboardParams.visualContinuity.colorPalette}`;
+      }
       
       // Generate video using the MiniMax Video-01-Director model
       const videoUrl = await generateVideoFromImage(videoPrompt, imageUrl, falaiKey);
@@ -566,10 +576,40 @@ const StoryboardPage: React.FC = () => {
         const blob = await response.blob();
         sceneFolder.file('visual.mp4', blob);
       } else if (previewUrls[sceneIndex]) {
-        // Otherwise fall back to the image
+        // Otherwise fall back to the image and generate a video
         const response = await fetch(previewUrls[sceneIndex]);
         const blob = await response.blob();
         sceneFolder.file('visual.jpg', blob);
+        
+        // If no video exists, try to generate one
+        try {
+          const storyboardParams = storyboard[sceneIndex];
+          const cameraInstruction = getCameraInstructionFromStoryboard(storyboardParams);
+          
+          // Build a comprehensive video prompt with detailed visual instructions
+          let videoPrompt = `[${cameraInstruction}] ${scene.textToVideoPrompt}`;
+          
+          // Add environment and lighting details from the storyboard
+          videoPrompt += `. ${storyboardParams.environmentType === 'interior' ? 'Interior' : 'Exterior'} scene during ${storyboardParams.timeOfDay} with ${storyboardParams.lightingConditions}`;
+          
+          // Add visual style details
+          if (storyboardParams.visualContinuity && storyboardParams.visualContinuity.colorPalette) {
+            videoPrompt += `. Visual style: ${storyboardParams.visualContinuity.colorPalette}`;
+          }
+          
+          toast.info('Generating video for export...', { id: 'gen-video-export' });
+          
+          // Generate and add the video
+          const videoUrl = await generateVideoFromImage(videoPrompt, previewUrls[sceneIndex], falaiKey);
+          const videoResponse = await fetch(videoUrl);
+          const videoBlob = await videoResponse.blob();
+          sceneFolder.file('visual.mp4', videoBlob);
+          
+          toast.success('Video generated for export!', { id: 'gen-video-export' });
+        } catch (error) {
+          console.error('Failed to generate video for export:', error);
+          toast.error('Could not generate video for export', { id: 'gen-video-export' });
+        }
       }
       
       // Generate and add voiceover

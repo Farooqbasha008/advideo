@@ -499,10 +499,37 @@ export const generateVideoFromImage = async (
       credentials: apiKey
     });
     
+    // Enhance the prompt with photorealistic and cinematic terms if needed
+    let enhancedPrompt = prompt;
+    
+    // Check if prompt already has descriptors for visual quality, and if not, add them
+    if (!prompt.toLowerCase().includes('photorealistic') && 
+        !prompt.toLowerCase().includes('realism') && 
+        !prompt.toLowerCase().includes('cinematic quality')) {
+      
+      // Extract camera movement information to tailor enhancement
+      const hasCameraMovement = 
+        prompt.includes('[Push in]') || 
+        prompt.includes('[Pull out]') || 
+        prompt.includes('[Pan') || 
+        prompt.includes('[Tilt') || 
+        prompt.includes('[Tracking');
+        
+      if (hasCameraMovement) {
+        // For dynamic camera movement, add appropriate descriptors
+        enhancedPrompt = `${prompt}. Photorealistic quality, natural fluid motion, detailed textures, realistic lighting and shadows, cinematic depth, proper motion physics`;
+      } else {
+        // For more static scenes, focus on detail and realism
+        enhancedPrompt = `${prompt}. Photorealistic quality, natural motion, detailed textures and materials, realistic lighting, natural depth of field`;
+      }
+    }
+    
+    console.log('Enhanced video prompt:', enhancedPrompt);
+    
     // Use the MiniMax Video-01-Director model
     const result = await fal.subscribe('fal-ai/minimax/video-01-director/image-to-video', {
       input: {
-        prompt,
+        prompt: enhancedPrompt,
         image_url: imageUrl,
         prompt_optimizer: true
       },
