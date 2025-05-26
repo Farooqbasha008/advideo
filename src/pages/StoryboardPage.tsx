@@ -13,12 +13,20 @@ import { ChevronLeft, Download, Save, Play, Wand2, Lightbulb, Sparkles, ImageIco
 import { StoryboardScene, Character } from '@/lib/videoGeneration';
 import { ScriptScene } from '@/lib/types';
 import { determineShotType, planCameraMovement, maintainContinuity, enhancePromptWithVisualGuidelines } from '@/lib/videoGeneration';
-import { generateStoryboardPreview, generateCharacterConsistentImage, generateVideoFromImage, generateInstantCharacterImage } from '@/lib/falai';
-import { EnhancedCharacter, getCameraInstructionFromStoryboard } from '@/lib/characterConsistency';
-import { cn } from '@/lib/utils';
-import AssetExporter from '@/components/AssetExporter';
+import { getCameraInstructionFromStoryboard } from '@/lib/characterConsistency';
 import { generateSpeech } from '@/lib/groqTTS';
 import { generateSound } from '@/lib/elevenlabs';
+import { 
+  generateImage, 
+  generateVideoFromImage, 
+  generateCharacterConsistentImage,
+  generateInstantCharacterImage,
+  generateStoryboardPreview,
+  VideoModel
+} from '@/lib/falai';
+import { EnhancedCharacter } from '@/lib/characterConsistency';
+import { cn } from '@/lib/utils';
+import AssetExporter from '@/components/AssetExporter';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 
@@ -67,6 +75,9 @@ const StoryboardPage: React.FC = () => {
   
   // Add state for exporting a single scene
   const [isExportingSingleScene, setIsExportingSingleScene] = useState<number | null>(null);
+  
+  // Add state for selected video model
+  const [selectedVideoModel, setSelectedVideoModel] = useState<VideoModel>(VideoModel.MINIMAX_DIRECTOR);
   
   // Initialize from location state
   useEffect(() => {
@@ -303,8 +314,8 @@ const StoryboardPage: React.FC = () => {
         videoPrompt += `. Visual style: ${storyboardParams.visualContinuity.colorPalette}`;
       }
       
-      // Generate video using the MiniMax Video-01-Director model
-      const videoUrl = await generateVideoFromImage(videoPrompt, imageUrl, falaiKey);
+      // Generate video using the selected model
+      const videoUrl = await generateVideoFromImage(videoPrompt, imageUrl, falaiKey, selectedVideoModel);
       
       // Save the generated video
       setVideoUrls(prev => ({
@@ -599,8 +610,8 @@ const StoryboardPage: React.FC = () => {
           
           toast.info('Generating video for export...', { id: 'gen-video-export' });
           
-          // Generate and add the video
-          const videoUrl = await generateVideoFromImage(videoPrompt, previewUrls[sceneIndex], falaiKey);
+          // Generate and add the video using the selected model
+          const videoUrl = await generateVideoFromImage(videoPrompt, previewUrls[sceneIndex], falaiKey, selectedVideoModel);
           const videoResponse = await fetch(videoUrl);
           const videoBlob = await videoResponse.blob();
           sceneFolder.file('visual.mp4', videoBlob);
@@ -941,6 +952,21 @@ const StoryboardPage: React.FC = () => {
         
         {/* Videos Tab */}
         <TabsContent value="videos" className="pt-4">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-medium">Scene Videos</h2>
+            <div className="flex items-center space-x-2">
+              <Label htmlFor="videoModel" className="text-sm mr-2">Video Model:</Label>
+              <select
+                id="videoModel"
+                value={selectedVideoModel}
+                onChange={(e) => setSelectedVideoModel(e.target.value as VideoModel)}
+                className="bg-[#1A1A1A] border border-white/10 rounded-md px-3 py-1 text-sm text-white"
+              >
+                <option value={VideoModel.MINIMAX_DIRECTOR}>MiniMax Video-01-Director</option>
+                <option value={VideoModel.LTX_VIDEO}>LTX Video 13B Distilled</option>
+              </select>
+            </div>
+          </div>
           {storyboard.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {storyboard.map((scene, index) => {
@@ -971,7 +997,7 @@ const StoryboardPage: React.FC = () => {
                                 onClick={() => handleGenerateVideoFromScene(index)}
                                 disabled={isLoading}
                               >
-                                Generate Video
+                                {isLoading ? 'Generating...' : 'Generate Video'}
                               </Button>
                             )}
                           </div>
@@ -1084,7 +1110,7 @@ const StoryboardPage: React.FC = () => {
                   </div>
                 </div>
                 
-                <div className="border-t border-white/10 pt-4 mt-4">
+                <div className="border-t border-white/10 pt-4 mt-6">
                   <h3 className="text-lg font-medium mb-3 flex items-center">
                     <User className="mr-2 h-4 w-4 text-[#D7F266]" />
                     Advanced Character Models
@@ -1119,6 +1145,45 @@ const StoryboardPage: React.FC = () => {
                     </ul>
                     <p className="text-xs text-white/50 italic">
                       Uses the MiniMax Subject Reference model which may have less detail but offers creative flexibility.
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="border-t border-white/10 pt-4 mt-6">
+                  <h3 className="text-lg font-medium mb-3 flex items-center">
+                    <Film className="mr-2 h-4 w-4 text-[#D7F266]" />
+                    Video Generation Models
+                  </h3>
+                  
+                  <div className="bg-black/20 rounded-lg p-4 mb-4">
+                    <h4 className="font-medium mb-2">MiniMax Video-01-Director</h4>
+                    <p className="text-sm text-white/70 mb-2">
+                      Default video generation model with these characteristics:
+                    </p>
+                    <ul className="text-xs text-white/70 list-disc pl-4 mb-2">
+                      <li>Supports camera movement instructions like [Push in], [Pan left], etc.</li>
+                      <li>Good at following precise direction for scene composition</li>
+                      <li>Optimized for cinematic scene transitions</li>
+                      <li>Processes faster than some alternatives</li>
+                    </ul>
+                    <p className="text-xs text-white/50 italic">
+                      Uses the MiniMax Video Director model which is specifically designed for storytelling sequences.
+                    </p>
+                  </div>
+                  
+                  <div className="bg-black/20 rounded-lg p-4">
+                    <h4 className="font-medium mb-2">LTX Video 13B Distilled</h4>
+                    <p className="text-sm text-white/70 mb-2">
+                      Alternative video model with these characteristics:
+                    </p>
+                    <ul className="text-xs text-white/70 list-disc pl-4 mb-2">
+                      <li>Higher visual fidelity and realism</li>
+                      <li>Better at natural fluid motion</li>
+                      <li>More realistic lighting and physics</li>
+                      <li>May require more processing time</li>
+                    </ul>
+                    <p className="text-xs text-white/50 italic">
+                      Uses fal.ai's LTX Video 13B Distilled model for more photorealistic and natural motion sequences.
                     </p>
                   </div>
                 </div>

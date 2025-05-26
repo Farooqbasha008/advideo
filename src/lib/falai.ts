@@ -74,6 +74,14 @@ interface FluxSchnellOutput {
 }
 
 /**
+ * Available video generation models
+ */
+export enum VideoModel {
+  MINIMAX_DIRECTOR = 'minimax-director',
+  LTX_VIDEO = 'ltx-video-13b'
+}
+
+/**
  * Generate a video using the Wan text-to-video model from fal.ai
  * @param prompt Text prompt for video generation
  * @param apiKey fal.ai API key
@@ -475,64 +483,83 @@ export const generateCharacterConsistentImage = async (
 };
 
 /**
- * Generate video from an image using MiniMax Video-01-Director model
+ * Generate video from an image using MiniMax Video-01-Director model or LTX Video model
  * This model allows for camera movement instructions for dynamic shots
  * @param prompt Text prompt for video generation, can include camera instructions in [brackets]
  * @param imageUrl URL of the image to use as the first frame
  * @param apiKey fal.ai API key
+ * @param model The video generation model to use
  * @returns URL to the generated video
  */
 export const generateVideoFromImage = async (
   prompt: string,
   imageUrl: string,
-  apiKey: string
+  apiKey: string,
+  model: VideoModel = VideoModel.MINIMAX_DIRECTOR
 ): Promise<string> => {
   if (!apiKey) {
     throw new Error('FAL.AI API key is required');
   }
   
   try {
-    console.log('Generating video from image via MiniMax Director');
-    
     // Configure the client with the API key
     fal.config({
       credentials: apiKey
     });
     
-    // Enhance the prompt with photorealistic and cinematic terms if needed
+    // Enhance the prompt with photorealistic and cinematic terms if model is MiniMax
     let enhancedPrompt = prompt;
+    let modelEndpoint = '';
     
-    // Check if prompt already has descriptors for visual quality, and if not, add them
-    if (!prompt.toLowerCase().includes('photorealistic') && 
-        !prompt.toLowerCase().includes('realism') && 
-        !prompt.toLowerCase().includes('cinematic quality')) {
+    if (model === VideoModel.MINIMAX_DIRECTOR) {
+      console.log('Generating video from image via MiniMax Director');
+      modelEndpoint = 'fal-ai/minimax/video-01-director/image-to-video';
       
-      // Extract camera movement information to tailor enhancement
-      const hasCameraMovement = 
-        prompt.includes('[Push in]') || 
-        prompt.includes('[Pull out]') || 
-        prompt.includes('[Pan') || 
-        prompt.includes('[Tilt') || 
-        prompt.includes('[Tracking');
+      // Check if prompt already has descriptors for visual quality, and if not, add them
+      if (!prompt.toLowerCase().includes('photorealistic') && 
+          !prompt.toLowerCase().includes('realism') && 
+          !prompt.toLowerCase().includes('cinematic quality')) {
         
-      if (hasCameraMovement) {
-        // For dynamic camera movement, add appropriate descriptors
-        enhancedPrompt = `${prompt}. Photorealistic quality, natural fluid motion, detailed textures, realistic lighting and shadows, cinematic depth, proper motion physics`;
-      } else {
-        // For more static scenes, focus on detail and realism
-        enhancedPrompt = `${prompt}. Photorealistic quality, natural motion, detailed textures and materials, realistic lighting, natural depth of field`;
+        // Extract camera movement information to tailor enhancement
+        const hasCameraMovement = 
+          prompt.includes('[Push in]') || 
+          prompt.includes('[Pull out]') || 
+          prompt.includes('[Pan') || 
+          prompt.includes('[Tilt') || 
+          prompt.includes('[Tracking');
+          
+        if (hasCameraMovement) {
+          // For dynamic camera movement, add appropriate descriptors
+          enhancedPrompt = `${prompt}. Photorealistic quality, natural fluid motion, detailed textures, realistic lighting and shadows, cinematic depth, proper motion physics`;
+        } else {
+          // For more static scenes, focus on detail and realism
+          enhancedPrompt = `${prompt}. Photorealistic quality, natural motion, detailed textures and materials, realistic lighting, natural depth of field`;
+        }
       }
+      
+      console.log('Enhanced video prompt:', enhancedPrompt);
+    } else if (model === VideoModel.LTX_VIDEO) {
+      console.log('Generating video from image via LTX Video 13B');
+      modelEndpoint = 'fal-ai/ltx-video-13b-distilled/image-to-video';
+      // LTX model doesn't need prompt enhancement
+      enhancedPrompt = prompt;
     }
     
-    console.log('Enhanced video prompt:', enhancedPrompt);
+    // Create input parameters based on the selected model
+    const inputParams = model === VideoModel.MINIMAX_DIRECTOR 
+      ? {
+          prompt: enhancedPrompt,
+          image_url: imageUrl,
+          prompt_optimizer: true
+        }
+      : {
+          prompt: enhancedPrompt,
+          image_url: imageUrl
+        };
     
-    // Use the MiniMax Video-01-Director model
-    const result = await fal.subscribe('fal-ai/minimax/video-01-director/image-to-video', {
-      input: {
-        prompt: enhancedPrompt,
-        image_url: imageUrl,
-        prompt_optimizer: true
-      },
+    // Use the selected model endpoint
+    const result = await fal.subscribe(modelEndpoint, {
+      input: inputParams,
       logs: true,
       onQueueUpdate: (update) => {
         if (update.status === "IN_PROGRESS") {
@@ -548,7 +575,7 @@ export const generateVideoFromImage = async (
     
     return result.data.video.url;
   } catch (error) {
-    console.error('Error generating video from image:', error);
+    console.error(`Error generating video from image with ${model}:`, error);
     throw error;
   }
 };
