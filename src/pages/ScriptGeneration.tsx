@@ -52,6 +52,7 @@ interface VideoScriptParams {
   music: string;
   characters: string;
   restrictions: string;
+  tonality: string;
 }
 
 interface ScriptScene {
@@ -124,7 +125,8 @@ const ScriptGeneration: React.FC = () => {
     voiceover: true,
     music: 'Corporate',
     characters: '',
-    restrictions: ''
+    restrictions: '',
+    tonality: 'Professional/Authoritative'
   });
   
   // Additional state variables for API keys and generation process
@@ -331,9 +333,12 @@ const ScriptGeneration: React.FC = () => {
     // Create the system prompt
     const systemPrompt = `You are a highly advanced AI assistant specialized in creating high-converting commercial video scripts for advertising and marketing. Your role is Senior Creative Director & Marketing Strategist with expert-level knowledge (Level 280) in advertising psychology, conversion optimization, brand messaging, and commercial video production. You are designed to generate exactly ${scriptParams.numScenes} scenes for a commercial video, each lasting 5 seconds.
 
-For commercial text-to-video prompts, follow these advertising-focused guidelines:
+CINEMATIC STORYTELLING GUIDELINES:
+   - Translate a core brand message into a cinematic visual story
+   - Use humor, surprise, and pacing to drive audience interest
+   - Maintain visual realism and continuity across multiple everyday settings
+   - Execute a high-impact reveal moment
 
-COMMERCIAL VISUAL PROMPT STRUCTURE:
 1. Product/Service Focus:
    - Always highlight the product or service being advertised
    - Show clear product benefits and features in action
@@ -351,6 +356,7 @@ COMMERCIAL VISUAL PROMPT STRUCTURE:
    - Employ dynamic movements that create energy and engagement
    - Include hero shots that showcase the product prominently
    - Create depth with realistic lighting and shadows
+   - Include professional camera specifications (e.g., Sony FX3, 35mm lens, f/2.8 aperture, 4K resolution)
 
 4. Brand-Appropriate Style:
    - Maintain consistent brand colors and aesthetic
@@ -359,7 +365,7 @@ COMMERCIAL VISUAL PROMPT STRUCTURE:
    - Emphasize high-fidelity, photorealistic rendering quality
 
 COMMERCIAL PROMPT FORMAT EXAMPLE:
-"A satisfied customer is using the product with a genuine smile, medium shot transitioning to product close-up, bright commercial lighting, clean modern background, professional advertising style with brand colors, high-quality commercial production, photorealistic rendering with detailed textures and natural lighting"
+"A satisfied customer is using the product with a genuine smile, medium shot transitioning to product close-up, bright commercial lighting, clean modern background, professional advertising style with brand colors, high-quality commercial production, photorealistic rendering with detailed textures and natural lighting, shot on Sony FX3 with 35mm lens, f/2.8 aperture, 4K resolution"
 
 AVOID IN COMMERCIALS:
 - Unclear product visibility
@@ -384,7 +390,7 @@ OUTPUT FORMAT (STRICT JSON SCHEMA):
   "logline": "A one-sentence summary of the video",
   "style": "${scriptParams.style}",
   "duration": "Total duration in seconds (e.g., ${scriptParams.numScenes * 5} seconds for ${scriptParams.numScenes} scenes)",
-  "scriptSummary": "Optional short paragraph summary of the full video concept",
+  "scriptSummary": "A explanatory paragraph summary of the full video concept",
   "scenes": [
     {
       "sceneNumber": 1,
@@ -407,6 +413,8 @@ IMPORTANT RENDERING CONSIDERATIONS:
 - Prioritize photorealistic rendering of all elements (faces, products, environments)
 - Ensure high-detail, realistic textures and materials
 - Include terms like "photorealistic", "hyper-realistic" or "high-fidelity" in visual prompts
+- Create a memorable high-impact reveal moment for the product or brand
+- Maintain visual continuity across scenes for a cohesive narrative flow
 
 PROMPT INPUT PARAMETERS FROM USER:
 - prompt: ${scriptParams.prompt || inputMessage}
@@ -416,6 +424,7 @@ PROMPT INPUT PARAMETERS FROM USER:
 - music: ${scriptParams.music}
 - characters: ${scriptParams.characters}
 - restrictions: ${scriptParams.restrictions}
+- tonality: ${scriptParams.tonality}
 
 Each scene's textToVideoPrompt must follow the structured format and guidelines above to ensure optimal video generation results.`;
     
@@ -476,9 +485,12 @@ Each scene's textToVideoPrompt must follow the structured format and guidelines 
       // Create the system prompt
       const systemPrompt = `You are a highly advanced AI assistant specialized in commercial advertising video script generation. Your role is Senior Creative Director & Marketing Strategist with expert-level knowledge (Level 280) in advertising copywriting, commercial production, brand storytelling, and persuasive video content creation. You are designed to generate exactly ${scriptParams.numScenes} scenes for a commercial video, each lasting 5 seconds.
 
-For commercial text-to-video prompts, follow these strict advertising guidelines:
+CINEMATIC STORYTELLING GUIDELINES:
+   - Translate a core brand message into a cinematic visual story
+   - Use humor, surprise, and pacing to drive audience interest
+   - Maintain visual realism and continuity across multiple everyday settings
+   - Execute a high-impact reveal moment
 
-COMMERCIAL VISUAL PROMPT STRUCTURE:
 1. Product/Brand Focus & Action:
    - Clearly showcase the product or service in action
    - Use present continuous tense highlighting benefits (e.g., "a customer is enjoying")
@@ -496,6 +508,7 @@ COMMERCIAL VISUAL PROMPT STRUCTURE:
    - Define camera movement (static, panning, tracking)
    - Include camera angle (eye-level, low angle, high angle)
    - Use terms like "photorealistic" or "hyper-realistic" in descriptions
+   - Include professional camera specifications (e.g., Sony FX3, 35mm lens, f/2.8 aperture, 4K resolution)
 
 4. Visual Style:
    - Mention color palette and tone
@@ -504,7 +517,7 @@ COMMERCIAL VISUAL PROMPT STRUCTURE:
    - Emphasize high-fidelity rendering with realistic lighting and shadows
 
 PROMPT FORMAT EXAMPLE:
-"A young woman in a red dress is walking through a neon-lit city street, medium tracking shot, shallow depth of field, warm cyberpunk color palette, volumetric lighting, night time scene with rain, cinematic 8K quality, photorealistic details with lifelike textures and materials"
+"A young woman in a red dress is walking through a neon-lit city street, medium tracking shot, shallow depth of field, warm cyberpunk color palette, volumetric lighting, night time scene with rain, cinematic 8K quality, photorealistic details with lifelike textures and materials, shot on Sony FX3 with 35mm lens, f/2.0 aperture, 4K resolution"
 
 AVOID:
 - Abstract concepts or metaphors
@@ -519,7 +532,7 @@ OUTPUT FORMAT (STRICT JSON SCHEMA):
   "logline": "A one-sentence summary of the video",
   "style": "${scriptParams.style}",
   "duration": "Total duration in seconds (e.g., ${scriptParams.numScenes * 5} seconds for ${scriptParams.numScenes} scenes)",
-  "scriptSummary": "Optional short paragraph summary of the full video concept",
+  "scriptSummary": "A explanatory paragraph summary of the full video concept",
   "scenes": [
     {
       "sceneNumber": 1,
@@ -542,6 +555,8 @@ IMPORTANT RENDERING CONSIDERATIONS:
 - Prioritize photorealistic rendering of all elements (faces, products, environments)
 - Ensure high-detail, realistic textures and materials
 - Include terms like "photorealistic", "hyper-realistic" or "high-fidelity" in visual prompts
+- Create a memorable high-impact reveal moment for the product or brand
+- Maintain visual continuity across scenes for a cohesive narrative flow
 
 PROMPT INPUT PARAMETERS FROM USER:
 - prompt: ${scriptParams.prompt || inputMessage}
@@ -551,6 +566,7 @@ PROMPT INPUT PARAMETERS FROM USER:
 - music: ${scriptParams.music}
 - characters: ${scriptParams.characters}
 - restrictions: ${scriptParams.restrictions}
+- tonality: ${scriptParams.tonality}
 
 Each scene's textToVideoPrompt must follow the structured format and guidelines above to ensure optimal video generation results.`;
       
@@ -1289,6 +1305,26 @@ Each scene's textToVideoPrompt must follow the structured format and guidelines 
                         <SelectItem value="Electronic">Electronic</SelectItem>
                         <SelectItem value="Acoustic">Acoustic</SelectItem>
                         <SelectItem value="None">No Music</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="tonality" className="text-white">Tonality</Label>
+                    <Select 
+                      value={scriptParams.tonality} 
+                      onValueChange={(value) => handleScriptParamChange('tonality', value)}
+                    >
+                      <SelectTrigger id="tonality" className="bg-[#0E0E0E] border-white/20 text-white">
+                        <SelectValue placeholder="Select tonality" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Professional/Authoritative">Professional/Authoritative</SelectItem>
+                        <SelectItem value="Humorous/Lighthearted">Humorous/Lighthearted</SelectItem>
+                        <SelectItem value="Informal/Conversational">Informal/Conversational</SelectItem>
+                        <SelectItem value="Discursive/Rambling">Discursive/Rambling</SelectItem>
+                        <SelectItem value="Inspiring/Motivational">Inspiring/Motivational</SelectItem>
+                        <SelectItem value="Exclusivity/Pride">Exclusivity/Pride</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
